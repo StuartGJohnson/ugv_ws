@@ -11,15 +11,7 @@ from geometry_msgs.msg import Twist
 from sensor_msgs.msg import Imu, MagneticField
 import math
 import os
-
-def is_jetson():
-    result = any("ugv_jetson" in root for root, dirs, files in os.walk("/"))
-    return result
-
-if is_jetson():
-    serial_port = '/dev/ttyTHS1'
-else:
-    serial_port = '/dev/ttyAMA0'
+from ugv_bringup.robot_tools import setup_robot, find_robot, get_robot_serial
 
 # Helper class for reading lines from a serial port
 class ReadLine:
@@ -51,9 +43,9 @@ class ReadLine:
 
 # Base controller class for managing UART communication and processing commands
 class BaseController:
-    def __init__(self, uart_dev_set, baud_set):
+    def __init__(self, ser: serial.Serial):
         self.logger = logging.getLogger('BaseController')  # Logger setup
-        self.ser = serial.Serial(uart_dev_set, baud_set, timeout=1)  # Open serial connection
+        self.ser = ser
         self.rl = ReadLine(self.ser)  # Initialize ReadLine helper
         self.command_queue = queue.Queue()  # Command queue for sending data
         self.command_thread = threading.Thread(target=self.process_commands, daemon=True)  # Start a separate thread for processing commands
@@ -106,13 +98,17 @@ class ugv_bringup(Node):
         self.odom_publisher_ = self.create_publisher(Float32MultiArray, "odom/odom_raw", 100)
         self.voltage_publisher_ = self.create_publisher(Float32, "voltage", 50)
         # Initialize the base controller with the UART port and baud rate
-        self.base_controller = BaseController(serial_port, 115200)
+        serial_port = find_robot()
+        self.ser = get_robot_serial(serial_port)
+        setup_robot(self.ser)
+        self.base_controller = BaseController(self.ser)
         # Timer to periodically execute the feedback loop
         self.feedback_timer = self.create_timer(0.001, self.feedback_loop)
 
     # Main loop for reading sensor feedback and publishing it to ROS topics
     def feedback_loop(self):
         self.base_controller.feedback_data()
+        #self.get_logger().info(str(self.base_controller.base_data["T"]))
         if self.base_controller.base_data["T"] == 1001:  # Check if the feedback type is correct
             self.publish_imu_data_raw()  # Publish IMU raw data
             self.publish_imu_mag()  # Publish magnetic field data
@@ -166,13 +162,17 @@ class ugv_bringup(Node):
         msg = Float32()
         msg.data = float(voltage_data["v"])/100
         self.voltage_publisher_.publish(msg)  # Publish the voltage data
+
+    def serial_shutdown(self):
+        self.ser.close()
                         
 # Main function to initialize the ROS node and start spinning
 def main(args=None):
     rclpy.init(args=args)  # Initialize ROS
     node = ugv_bringup()  # Create the UGV bringup node
     rclpy.spin(node)  # Keep the node running
-    #node.destroy_node()  # (optional) Shutdown the node
+    node.serial_shutdown()
+    node.destroy_node()
     rclpy.shutdown()  # Shutdown ROS
 
 if __name__ == '__main__':

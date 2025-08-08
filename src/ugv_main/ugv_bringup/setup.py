@@ -27,6 +27,8 @@ setup(
         'console_scripts': [
             'ugv_bringup = ugv_bringup.ugv_bringup:main',
             'ugv_driver = ugv_bringup.ugv_driver:main',
+            'ugv_driver_estop = ugv_bringup.ugv_driver_estop:main',
+            'dynamic_tf_publisher = ugv_bringup.dynamic_tf_publisher:main'
         ],
     },
 )

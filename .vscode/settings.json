@@ -1,0 +1,24 @@
+{
+    "window.titleBarStyle": "native",
+    "python.autoComplete.extraPaths": [
+        "/home/sjohnson/ros2_ws/install/my_robot_bringup/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/sjohnson/ros2_ws/install/my_robot_bringup/lib/python3.10/site-packages",
+        "/opt/ros/humble/lib/python3.10/site-packages",
+        "/opt/ros/humble/local/lib/python3.10/dist-packages"
+    ],
+    "cmake.sourceDirectory": [
+        "/home/sjohnson/ugv_ws/src/ugv_main/ugv_base_node","/home/sjohnson/ugv_ws/src/differential_drive_test"],
+    "python.testing.unittestArgs": [
+        "-v",
+        "-s",
+        "./src",
+        "-p",
+        "test*.py"
+    ],
+    "python.testing.pytestEnabled": false,
+    "python.testing.unittestEnabled": true
+}

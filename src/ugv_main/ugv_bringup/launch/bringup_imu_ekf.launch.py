@@ -37,7 +37,7 @@ def generate_launch_description():
     # Include the robot state launch from the ugv_description package
     robot_state_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'display.launch.py')
+            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup.launch.py')
         ),
         launch_arguments={
             'use_rviz': LaunchConfiguration('use_rviz'),
@@ -59,20 +59,20 @@ def generate_launch_description():
             ]
     )
     # Define the nodes to be launched
-    imu_filter_node = Node(
-        package='imu_filter_madgwick',
-        executable='imu_filter_madgwick_node',
-        parameters=[imu_filter_config]
-    )
+    # imu_filter_node = Node(
+    #     package='imu_filter_madgwick',
+    #     executable='imu_filter_madgwick_node',
+    #     parameters=[imu_filter_config]
+    # )
     # Define the nodes to be launched
     laser_bringup_launch = IncludeLaunchDescription(PythonLaunchDescriptionSource(
-        [os.path.join(get_package_share_directory('ldlidar'), 'launch'),
-         '/ldlidar.launch.py'])
+        [os.path.join(get_package_share_directory('ldlidar_stl_ros2'), 'launch'),
+         '/ld19.launch.py'])
     )
     # Define the nodes to be launched
     driver_node = Node(
         package='ugv_bringup',
-        executable='ugv_driver',
+        executable='ugv_driver_estop',
     )
     # Define the nodes to be launched
     base_node = Node(

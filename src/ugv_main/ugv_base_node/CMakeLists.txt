@@ -44,9 +44,13 @@ ament_target_dependencies(base_node rclcpp tf2 tf2_ros nav_msgs geometry_msgs se
 add_executable(base_node_ekf src/base_node_ekf.cpp)
 ament_target_dependencies(base_node_ekf rclcpp tf2 tf2_ros nav_msgs geometry_msgs sensor_msgs)
 
+add_executable(base_node_no_imu src/base_node_no_imu.cpp)
+ament_target_dependencies(base_node_no_imu rclcpp tf2 tf2_ros nav_msgs geometry_msgs sensor_msgs)
+
 install(TARGETS
   base_node
   base_node_ekf
+  base_node_no_imu
   DESTINATION lib/${PROJECT_NAME}
 )
 ament_package()

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(rf2o_laser_odometry)
+project(rf2o_laser_odometry_vendor)
 
 
 if(NOT CMAKE_CXX_STANDARD)
