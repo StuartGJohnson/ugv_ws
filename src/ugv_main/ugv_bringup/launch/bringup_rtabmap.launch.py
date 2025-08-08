@@ -91,6 +91,16 @@ def generate_launch_description():
         }.items()
     )
 
+    # nav2 launch
+    nav2_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'params_file': 'nav2_rtabmap_params.yaml',
+        }.items()
+    )
+
     # Include laser odometry launch file
     rf2o_laser_odometry_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -133,6 +143,7 @@ def generate_launch_description():
         realsense_launch,
         laser_bringup_launch,
         rf2o_laser_odometry_launch,
+        nav2_launch,
 
         # Launch arguments
         DeclareLaunchArgument(
