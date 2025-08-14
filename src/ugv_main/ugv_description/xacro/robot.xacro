@@ -145,7 +145,7 @@
     <xacro:property name="body_battery_offset" value="${body_height/2 + battery_height/2 + velcro_height}"/>
     <xacro:property name="battery_orin_offset" value="${battery_height/2 + orin_height/2 + velcro_height}"/>
     <xacro:property name="orin_lidar_offset" value="${orin_height/2 + lidar_height/2 + velcro_height}"/>
-    <xacro:property name="orin_d435_offset_x" value="${orin_length/2 + d435_length/2 + velcro_height}"/>
+    <xacro:property name="orin_d435_offset_x" value="${orin_length/2 + d435_length/2 + velcro_height*2}"/>
     <xacro:property name="orin_d435_offset_z" value="${orin_height/2 - d435_height/2}"/>
     <xacro:property name="orin_gps_offset_x" value=".034"/>
     <xacro:property name="orin_gps_offset_y" value="-${orin_width/2 + gps_width/2}"/>
@@ -248,7 +248,7 @@
 
     <!-- camera joint -->
     <joint name="d435_joint" type="fixed">
-        <origin xyz="${orin_d435_offset_x} 0 ${orin_d435_offset_z}" rpy="0 0 0"/>
+	    <origin xyz="${orin_d435_offset_x} 0 ${orin_d435_offset_z-.02}" rpy="0 ${35.0*3.1416/180.0} 0"/>
         <parent link="orin_link"/>
         <child link="camera_link"/>
     </joint>

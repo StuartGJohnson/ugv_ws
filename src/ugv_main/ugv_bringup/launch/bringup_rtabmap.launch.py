@@ -43,7 +43,9 @@ def generate_launch_description():
           # RTAB-Map's parameters should be strings:
           'Reg/Strategy':'1',
           'Reg/Force3DoF':'true',
-          'RGBD/NeighborLinkRefining':'True',
+          'RGBD/NeighborLinkRefining':'true',
+          'Grid/FromDepth': 'true',
+          'GridGlobal/FullUpdate': 'true',
           'Grid/RayTracing':'true', # Fill empty space
           'Grid/3D':'true', # Use 2D occupancy
           'Grid/RangeMax':'3',
@@ -53,7 +55,7 @@ def generate_launch_description():
           'Grid/MaxGroundAngle': '10',  # All points above 5 cm are obstacles
           'Grid/MaxObstacleHeight':'0.5',  # All points over 1 meter are ignored
           'Grid/MinPlaneMinInliers': 100,
-          'Grid/RangeMin':'0.025', # ignore laser scan points on the robot itself
+          'Grid/RangeMin':'0.010', # ignore laser scan points on the robot itself
           'Grid/CellSize':'.02',
           'Grid/Voxel': '.02',
           'Optimizer/GravitySigma':'0' # Disable imu constraints (we are already in 2D)
@@ -83,7 +85,7 @@ def generate_launch_description():
             os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
         ),
         launch_arguments={
-            'pointcloud.enable': 'true',
+            'pointcloud.enable': 'false',
             'align_depth.enable': 'true',
             'depth_module.depth_profile': '480x270x6',
             'rgb_camera.color_profile': '424x240x6',
