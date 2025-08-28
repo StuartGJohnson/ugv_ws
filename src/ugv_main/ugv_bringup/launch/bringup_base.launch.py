@@ -53,7 +53,6 @@ def generate_launch_description():
         executable='dynamic_tf_publisher'
     )
 
-
     driver_node = Node(
         package='ugv_bringup',
         executable='ugv_driver_estop',
@@ -64,6 +63,20 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ldlidar_stl_ros2'), 'launch', 'ld19.launch.py')
         )
+    )
+
+    # realsense launch
+    realsense_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
+        ),
+        launch_arguments={
+            'pointcloud.enable': 'true',
+            'align_depth.enable': 'true',
+            'depth_module.depth_profile': '480x270x6',
+            'rgb_camera.color_profile': '424x240x6',
+            'camera_namespace': '/',
+        }.items(),
     )
 
     # Define the base node with parameters
@@ -82,6 +95,7 @@ def generate_launch_description():
         dyn_tf,
         driver_node,
         base_node,
-        rf2o_laser_odometry_launch
+        rf2o_laser_odometry_launch,
+        realsense_launch
         #imu_complementary_filter_node
     ])

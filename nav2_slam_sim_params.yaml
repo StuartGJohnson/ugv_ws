@@ -1,6 +1,6 @@
 bt_navigator:
   ros__parameters:
-    use_sim_time: False 
+    use_sim_time: True 
     global_frame: map
     robot_base_frame: base_link
     odom_topic: /odom
@@ -63,16 +63,18 @@ bt_navigator:
 
 bt_navigator_navigate_through_poses_rclcpp_node:
   ros__parameters:
-    use_sim_time: False 
+    use_sim_time: True 
 
 bt_navigator_navigate_to_pose_rclcpp_node:
   ros__parameters:
-    use_sim_time: False 
+    use_sim_time: True 
 
 controller_server:
   ros__parameters:
-    use_sim_time: False
-    controller_frequency: 20.0
+    tf_buffer_duration: 30
+    use_sim_time: True
+    controller_frequency: 10.0
+    transform_tolerance: 0.5
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -86,6 +88,7 @@ controller_server:
       plugin: "nav2_controller::SimpleProgressChecker"
       required_movement_radius: 0.2
       movement_time_allowance: 10.0
+      transform_tolerance: 0.5
     # Goal checker parameters
     #precise_goal_checker:
     #  plugin: "nav2_controller::SimpleGoalChecker"
@@ -95,24 +98,30 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
-    # DWB parameters
+      xy_goal_tolerance: 0.10
+      yaw_goal_tolerance: 0.1
+      transform_tolerance: 0.5
     FollowPath:
       # Shim first… - shim is dodgy in simulation due to the hard-wired
-      plugin: "nav2_rotation_shim_controller::RotationShimController"
-      angular_dist_threshold: 0.1          # rad to path heading before moving
-      forward_sampling_distance: 0.2      # how far along path to estimate heading
-      rotate_to_heading_angular_vel: 1.5   # rad/s
-      max_angular_accel: 3.0
-      simulate_ahead_time: 1.0
-      rotate_to_goal_heading: true         # also align at goal (optional)
-      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      # transform_tolerance of 0.1
+#      plugin: "nav2_rotation_shim_controller::RotationShimController"
+#      angular_dist_threshold: 0.1          # rad to path heading before moving
+#      forward_sampling_distance: 0.2      # how far along path to estimate heading
+#      rotate_to_heading_angular_vel: 1.5   # rad/s
+#      max_angular_accel: 3.0
+#      simulate_ahead_time: 1.0
+#      rotate_to_goal_heading: true         # also align at goal (optional)
+#      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.32
       lookahead_dist: 0.32
+      transform_tolerance: 0.5
       use_velocity_scaled_lookahead_dist: false
-#      plugin: "dwb_core::DWBLocalPlanner"
-#      debug_trajectory_details: True
+#      primary_controller: "dwb_core::DWBLocalPlanner"
+#      debug_trajectory_details: true
+#      publish_evaluation: true
+#      publish_global_plan: true
+#      publish_transformed_plan: true
 #      min_vel_x: 0.0
 #      min_vel_y: 0.0
 #      max_vel_x: 0.26
@@ -136,21 +145,23 @@ controller_server:
 #      linear_granularity: 0.05
 #      angular_granularity: 0.025
 #      transform_tolerance: 0.2
-#      xy_goal_tolerance: 0.25
+#      xy_goal_tolerance: 0.10
 #      trans_stopped_velocity: 0.25
 #      short_circuit_trajectory_evaluation: True
 #      stateful: True
-#      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-#      BaseObstacle.scale: 0.02
-#      PathAlign.scale: 32.0
-#      PathAlign.forward_point_distance: 0.1
+#      critics: ["Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+#      BaseObstacle.scale: 0.05
+#      PathAlign.scale: 64.0
+#      PathAlign.forward_point_distance: 0.2
 #      GoalAlign.scale: 24.0
-#      GoalAlign.forward_point_distance: 0.1
-#      PathDist.scale: 32.0
-#      GoalDist.scale: 24.0
-#      RotateToGoal.scale: 32.0
-#      RotateToGoal.slowing_factor: 5.0
-#      RotateToGoal.lookahead_time: -1.0
+#      GoalAlign.forward_point_distance: 0.2
+#      PathDist.scale: 10.0
+#      PathDist.forward_point_distance: 0.2
+#      GoalDist.scale: 5.0
+#      GoalDist.forward_point_distance: 0.1
+#      Oscillation.scale: 0.0
+#      forward_point_distance: 0.2
+
 
 local_costmap:
   local_costmap:
@@ -159,12 +170,15 @@ local_costmap:
       publish_frequency: 2.0
       global_frame: odom
       robot_base_frame: base_link
-      use_sim_time: False
+      use_sim_time: True
       rolling_window: true
       width: 5
       height: 5
       resolution: 0.05
       robot_radius: 0.16
+      footprint_padding: 0.04
+      transform_tolerance: 0.5
+      tf_buffer_duration: 30
       plugins: ["voxel_layer", "inflation_layer"]
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
@@ -182,33 +196,40 @@ local_costmap:
         mark_threshold: 0
         observation_sources: cloud
         cloud:
-          topic: /fusion/points
+          topic: /scan
           max_obstacle_height: 0.25
           min_obstacle_height: 0.02
           clearing: true
           marking: true
-          data_type: "PointCloud2"
+          data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.1
-        observation_persistence: 0.0
+          observation_persistence: 0.0
+        # Force SensorData QoS with depth=1 so stale scans are dropped
+        observation_qos_overrides:
+          cloud:
+            reliability: best_effort
+            durability: volatile
+            history: keep_last
+            depth: 1
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_topic: "/octomap_grid"
         map_subscribe_transient_local: True
-        footprint_clearing_enabled: True
-        subscribe_to_updates: False
       always_send_full_costmap: True
 
 global_costmap:
   global_costmap:
     ros__parameters:
+      transform_tolerance: 0.5
+      tf_buffer_duration: 30
       update_frequency: 1.0
       publish_frequency: 1.0
       global_frame: map
       robot_base_frame: base_link
-      use_sim_time: False
+      use_sim_time: True
+      queue_size: 10
       robot_radius: 0.16
       footprint_padding: 0.04
       resolution: 0.05
@@ -216,10 +237,7 @@ global_costmap:
       plugins: ["static_layer", "voxel_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_subscribe_transient_local: False
-        footprint_clearing_enabled: True
-        subscribe_to_updates: False
-        map_topic: "/octomap_grid"
+        map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
@@ -236,29 +254,36 @@ global_costmap:
         mark_threshold: 0
         observation_sources: cloud
         cloud:
-          topic: /fusion/points
+          topic: /scan
           max_obstacle_height: 0.25
           min_obstacle_height: 0.02
           clearing: true
           marking: true
-          data_type: "PointCloud2"
+          data_type: "LaserScan"
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
           obstacle_min_range: 0.1
         observation_persistence: 0.0
+        # Force SensorData QoS with depth=1 so stale scans are dropped
+        observation_qos_overrides:
+          scan:
+            reliability: best_effort
+            durability: volatile
+            history: keep_last
+            depth: 1
       always_send_full_costmap: True
 
 map_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: ""
 
 map_saver:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     save_map_timeout: 5.0
     free_thresh_default: 0.25
     occupied_thresh_default: 0.65
@@ -266,18 +291,19 @@ map_saver:
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
-    use_sim_time: False
+    expected_planner_frequency: 2.0
+    transform_tolerance: 0.5
+    tf_buffer_duration: 30
+    use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
       tolerance: 0.05
       use_astar: false
-      allow_unknown: true
 
 smoother_server:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     smoother_plugins: ["simple_smoother"]
     simple_smoother:
       plugin: "nav2_smoother::SimpleSmoother"
@@ -290,6 +316,7 @@ behavior_server:
     costmap_topic: local_costmap/costmap_raw
     footprint_topic: local_costmap/published_footprint
     cycle_frequency: 10.0
+    #behavior_plugins: ["spin","drive_on_heading"]
     behavior_plugins: ["spin","backup","wait", "drive_on_heading", "assisted_teleop"]
     spin:
       plugin: "nav2_behaviors/Spin"
@@ -303,8 +330,9 @@ behavior_server:
       plugin: "nav2_behaviors/AssistedTeleop"
     global_frame: odom
     robot_base_frame: base_link
-    transform_tolerance: 0.1
-    use_sim_time: False
+    transform_tolerance: 0.5
+    tf_buffer_duration: 30
+    use_sim_time: True
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.0
     min_rotational_vel: 0.4
@@ -312,11 +340,11 @@ behavior_server:
 
 robot_state_publisher:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
 
 waypoint_follower:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     loop_rate: 20
     stop_on_failure: false
     waypoint_task_executor_plugin: "wait_at_waypoint"
@@ -327,7 +355,7 @@ waypoint_follower:
 
 velocity_smoother:
   ros__parameters:
-    use_sim_time: False
+    use_sim_time: True
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"

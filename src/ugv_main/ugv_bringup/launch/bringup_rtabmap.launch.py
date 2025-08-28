@@ -16,12 +16,12 @@
 #     $ ros2 run turtlebot3_teleop teleop_keyboard
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
 from launch.substitutions import LaunchConfiguration
 from launch.conditions import IfCondition, UnlessCondition
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap
 from ament_index_python.packages import get_package_share_directory
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.launch_description_sources import PythonLaunchDescriptionSource, FrontendLaunchDescriptionSource
 import os
 
 def generate_launch_description():
@@ -29,32 +29,50 @@ def generate_launch_description():
     use_sim_time = LaunchConfiguration('use_sim_time')
     localization = LaunchConfiguration('localization')
 
+    # todo: on a real robot, we want this false - until
+    # we get around to fixing proprioceptive odometry
     pub_odom_tf_arg = DeclareLaunchArgument(
         'pub_odom_tf', default_value='false',
-        description='Whether to publish the tf from the original odom to the base_footprint'
+        description='Whether to publish the tf from the original odom to the base_footprint',
+        condition=UnlessCondition(use_sim_time)
+    )
+
+    pub_odom_tf_arg_sim = DeclareLaunchArgument(
+        'pub_odom_tf', default_value='true',
+        description='Whether to publish the tf from the original odom to the base_footprint',
+        condition=IfCondition(use_sim_time)
     )
 
     parameters={
           'frame_id':'base_footprint',
           'use_sim_time':use_sim_time,
-          'subscribe_rgbd':True,
-          'subscribe_scan':True,
+          'subscribe_rgbd': False,
+          'subscribe_rgb': True,
+          'subscribe_depth': False,
+          'subscribe_scan': False,
+          'subscribe_scan_cloud':True,
           'use_action_for_goal':True,
           # RTAB-Map's parameters should be strings:
-          'Reg/Strategy':'1',
+          'Reg/Strategy':'2', # for cloud only
+          #'Reg/Strategy': '1',
+          'RGBD/LinearUpdate' : '0.10',
+          'RGBD/AngularUpdate' : '0.10',
+          'Mem/STMSize':'0',
           'Reg/Force3DoF':'true',
           'RGBD/NeighborLinkRefining':'true',
-          'Grid/FromDepth': 'true',
+          'Grid/FromDepth': 'false',
           'GridGlobal/FullUpdate': 'true',
           'Grid/RayTracing':'true', # Fill empty space
-          'Grid/3D':'true', # Use 2D occupancy
+          'Grid/3D':'true', # Use 3D occupancy
+          #'Grid/3D': 'false',  # Use 2D occupancy
           'Grid/RangeMax':'3',
-          'Grid/NormalsSegmentation':'true', # Use passthrough filter to detect obstacles
-          'Grid/Sensor':'2', # Use both laser scan and camera for obstacle detection in global map
-          'Grid/MaxGroundHeight':'0.015', # All points above 5 cm are obstacles
-          'Grid/MaxGroundAngle': '10',  # All points above 5 cm are obstacles
-          'Grid/MaxObstacleHeight':'0.5',  # All points over 1 meter are ignored
-          'Grid/MinPlaneMinInliers': 100,
+          'Grid/NormalsSegmentation':'false', # Use passthrough filter to detect obstacles
+          'Grid/Sensor':'0', # scan_cloud
+          #'Grid/Sensor': '1',  # laser scan
+          'Grid/MaxGroundHeight':'0.015', # All points above 1.5 cm are obstacles
+          'Grid/MaxGroundAngle': '10',  # All ground tilted more than 10 degrees is an obstacle
+          'Grid/MaxObstacleHeight':'0.5',  # All points over 0.5 meter are ignored
+          'Grid/MinPlaneMinInliers': '100',
           'Grid/RangeMin':'0.010', # ignore laser scan points on the robot itself
           'Grid/CellSize':'.02',
           'Grid/Voxel': '.02',
@@ -62,35 +80,49 @@ def generate_launch_description():
     }
 
     remappings=[
-          ('rgb/image', '/camera/color/image_raw'),
-          ('rgb/camera_info', '/camera/color/camera_info'),
-          ('depth/image', '/camera/aligned_depth_to_color/image_raw')]
+          ('rgb/image', '/camera/image'),
+          ('rgb/camera_info', '/camera/camera_info'),
+          ('depth/image', '/camera/depth'),
+          ('scan_cloud', '/fusion/points')]
+          #('octomap_grid', '/map')]
 
     robot_state_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup.launch.py')
-        )
+            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup_ugv.launch.py')
+        ),
+        condition=UnlessCondition(use_sim_time)
     )
 
     # lidar launch
+    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
     laser_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('ldlidar_stl_ros2'), 'launch', 'ld19.launch.py')
-        )
+        ),
+        condition=UnlessCondition(use_sim_time)
     )
 
     # realsense launch
-    realsense_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
-        ),
-        launch_arguments={
-            'pointcloud.enable': 'false',
-            'align_depth.enable': 'true',
-            'depth_module.depth_profile': '480x270x6',
-            'rgb_camera.color_profile': '424x240x6',
-            'camera_namespace': '/',
-        }.items()
+    realsense_launch = GroupAction(
+        actions=[
+            SetRemap(src='/camera/color/image_raw',dst='/camera/image'),
+            SetRemap(src='/camera/color/camera_info', dst='/camera/camera_info'),
+            SetRemap(src='/camera/aligned_depth_to_color/image_raw', dst='/camera/depth'),
+            SetRemap(src='/camera/depth/color/points', dst='/camera/points'),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
+                ),
+                launch_arguments={
+                    'pointcloud.enable': 'true',
+                    'align_depth.enable': 'true',
+                    'depth_module.depth_profile': '480x270x15',
+                    'rgb_camera.color_profile': '424x240x15',
+                    'camera_namespace': '/'
+                }.items()
+            )
+        ],
+        condition=UnlessCondition(use_sim_time)
     )
 
     # nav2 launch
@@ -100,52 +132,116 @@ def generate_launch_description():
         ),
         launch_arguments={
             'params_file': 'nav2_rtabmap_params.yaml',
-        }.items()
+        }.items(),
+        condition=UnlessCondition(use_sim_time)
+    )
+
+    nav2_launch_sim = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
+        ),
+        launch_arguments={
+            'params_file': 'nav2_rtabmap_sim_params.yaml',
+            'use_sim_time': 'true'
+        }.items(),
+        condition=IfCondition(use_sim_time)
     )
 
     # Include laser odometry launch file
+    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
     rf2o_laser_odometry_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('rf2o_laser_odometry'), 'launch', 'rf2o_laser_odometry.launch.py')
-        )
+            'rf2o_laser_odometry.launch.py'
+        ),
+        condition=UnlessCondition(use_sim_time)
     )
 
     bringup_node = Node(
         package='ugv_bringup',
         executable='ugv_bringup',
+        condition=UnlessCondition(use_sim_time)
     )
 
     dyn_tf = Node(
         package='ugv_bringup',
-        executable='dynamic_tf_publisher'
+        executable='dynamic_tf_publisher',
+        condition=UnlessCondition(use_sim_time)
     )
 
 
     driver_node = Node(
         package='ugv_bringup',
         executable='ugv_driver_estop',
+        condition=UnlessCondition(use_sim_time)
     )
 
     # Define the base node with parameters
     base_node = Node(
         package='ugv_base_node',
         executable='base_node_no_imu',
-        parameters=[{'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}]
+        # TODO: when the base node has odom, might bring this back
+        # right now, laser odometry is doing this
+        # parameters=[{'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}],
+        parameters=[{'pub_odom_tf': False}],
+        condition=UnlessCondition(use_sim_time)
     )
 
-    return LaunchDescription([
+    # point cloud/scan fusion
+    fuser_node = Node(
+        package='point_cloud_tools',
+        executable='cloud_scan_fuser_node',
+        parameters=[{'cloud_stride_u': 8, 'cloud_stride_v': 8}]
+    )
 
-        # robot base nodes
-        pub_odom_tf_arg,
-        bringup_node,
-        driver_node,
-        dyn_tf,
-        base_node,
-        robot_state_launch,
-        realsense_launch,
-        laser_bringup_launch,
-        rf2o_laser_odometry_launch,
-        nav2_launch,
+    # simulated robot launch
+    gazebo_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+          os.path.join(get_package_share_directory('gazebo_differential_drive_robot_4wheel'), 'launch', 'ugv.launch.py')
+        ),
+        launch_arguments={
+          'world': '/home/sjohnson/WorldGeneration/scene_stuffx.sdf',
+          'world': '/home/sjohnson/WorldGeneration/scene_stuffx.sdf',
+        }.items(),
+        condition=IfCondition(use_sim_time)
+    )
+
+    # register_node = Node(
+    #     package='depth_image_proc',
+    #     executable='register_node',
+    #     remappings=[('depth/image_rect', '/camera/depth/image_raw'),
+    #                 ('depth/camera_info', '/camera/depth/camera_info'),
+    #                 ('rgb/camera_info', '/camera/color/camera_info'),
+    #                 ('depth_registered/image_rect', '/camera/aligned_depth_to_color/image_raw'),
+    #                 ('depth_registered/camera_info', '/camera/aligned_depth_to_color/camera_info')
+    #                 ]
+    # )
+
+    # # voxel grid downsample filter launch (autoware)
+    # downsample_launch = IncludeLaunchDescription(
+    #     FrontendLaunchDescriptionSource(
+    #         os.path.join(get_package_share_directory('autoware_downsample_filters'), 'launch', 'voxel_grid_downsample_filter_node.launch.xml')
+    #     ),
+    #     launch_arguments={
+    #         'input_topic_name': '/camera_points',
+    #         'output_topic_name': "/cloud",
+    #         'input_frame': "camera_link",
+    #         'output_frame': "camera_link",
+    #         'voxel_grid_downsample_filter_param_file': "voxel_grid_downsample_filter_node.param.yaml",
+    #     }.items()
+    # )
+
+    # voxel grid downsample node
+    # pc_node = Node(
+    #     package='point_cloud_tools',
+    #     executable='voxel_grid_filter_node',
+    #     parameters=[{
+    #         'leaf_size': .01,
+    #         'input_topic': '/camera_points',
+    #         'output_topic': 'cloud'
+    #     }]
+    # )
+
+    return LaunchDescription([
 
         # Launch arguments
         DeclareLaunchArgument(
@@ -156,12 +252,28 @@ def generate_launch_description():
             'localization', default_value='false',
             description='Launch in localization mode.'),
 
+        # robot base nodes
+        pub_odom_tf_arg,
+        pub_odom_tf_arg_sim,
+        bringup_node,
+        driver_node,
+        dyn_tf,
+        base_node,
+        fuser_node,
+        gazebo_launch,
+        robot_state_launch,
+        realsense_launch,
+        laser_bringup_launch,
+        rf2o_laser_odometry_launch,
+        nav2_launch,
+        nav2_launch_sim,
+
         # Nodes to launch
 
-        Node(
-            package='rtabmap_sync', executable='rgbd_sync', output='screen',
-            parameters=[{'approx_sync':False, 'use_sim_time':use_sim_time}],
-            remappings=remappings),
+        # Node(
+        #     package='rtabmap_sync', executable='rgbd_sync', output='screen',
+        #     parameters=[{'approx_sync':False, 'use_sim_time':use_sim_time}],
+        #     remappings=remappings),
 
         # SLAM Mode:
         Node(
@@ -196,18 +308,26 @@ def generate_launch_description():
         # Obstacle detection with the camera for nav2 local costmap.
         # First, we need to convert depth image to a point cloud.
         # Second, we segment the floor from the obstacles.
-        Node(
-            package='rtabmap_util', executable='point_cloud_xyz', output='screen',
-            parameters=[{'decimation': 2,
-                         'max_depth': 3.0,
-                         'voxel_size': 0.02}],
-            remappings=[('depth/image', '/camera/aligned_depth_to_color/image_raw'),
-                        ('depth/camera_info', '/camera/aligned_depth_to_color/camera_info'),
-                        ('cloud', '/camera/cloud')]),
-        Node(
-            package='rtabmap_util', executable='obstacles_detection', output='screen',
-            parameters=[parameters],
-            remappings=[('cloud', '/camera/cloud'),
-                        ('obstacles', '/camera/obstacles'),
-                        ('ground', '/camera/ground')]),
+        # Node(
+        #     package='rtabmap_util', executable='point_cloud_xyz', output='screen',
+        #     parameters=[{'decimation': 2,
+        #                  'max_depth': 3.0,
+        #                  'voxel_size': 0.02}],
+        #     remappings=[('depth/image', '/camera/depth_image'),
+        #                 ('depth/camera_info', '/camera/camera_info'),
+        #                 ('cloud', '/camera/cloud')]),
+
+        # Node(
+        #     package='rtabmap_util', executable='obstacles_detection', output='screen',
+        #     parameters=[parameters],
+        #     remappings=[('cloud', '/camera/cloud'),
+        #                 ('obstacles', '/camera/obstacles'),
+        #                 ('ground', '/camera/ground')]),
+
+        # Node(
+        #     package='rtabmap_util', executable='obstacles_detection', output='screen',
+        #     parameters=[parameters],
+        #     remappings=[('cloud', '/camera/cloud'),
+        #                 ('obstacles', '/camera/obstacles'),
+        #                 ('ground', '/camera/ground')]),
     ])

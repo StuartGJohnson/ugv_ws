@@ -2,11 +2,12 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/differential_drive_test" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/frontier_explorer" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/gazebo_differential_drive_robot_4wheel" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/ldlidar_stl_ros2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/m-explore-ros2" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/point_cloud_tools" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/src/rf2o_laser_odometry" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/safety" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/src/slam_toolbox" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/src/rtabmap_ros" vcs="Git" />
   </component>
 </project>
