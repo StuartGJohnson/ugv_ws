@@ -72,7 +72,7 @@ bt_navigator_navigate_to_pose_rclcpp_node:
 controller_server:
   ros__parameters:
     use_sim_time: False
-    controller_frequency: 20.0
+    controller_frequency: 10.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
     min_theta_velocity_threshold: 0.001
@@ -109,7 +109,7 @@ controller_server:
       rotate_to_goal_heading: true         # also align at goal (optional)
       primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.32
-      lookahead_dist: 0.32
+      lookahead_dist: 0.5
       use_velocity_scaled_lookahead_dist: false
 #      plugin: "dwb_core::DWBLocalPlanner"
 #      debug_trajectory_details: True
@@ -169,7 +169,7 @@ local_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
-        inflation_radius: 0.3
+        inflation_radius: 0.2
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -180,10 +180,21 @@ local_costmap:
         z_voxels: 16
         max_obstacle_height: 0.25
         mark_threshold: 0
-        observation_sources: cloud
-        cloud:
-          topic: /fusion/points
+        observation_sources: scan cloud
+        scan:
+          topic: /scan
           max_obstacle_height: 0.25
+          min_obstacle_height: 0.17
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.05
+        cloud:
+          topic: /camera/cloud
+          max_obstacle_height: 0.15
           min_obstacle_height: 0.02
           clearing: true
           marking: true
@@ -191,11 +202,11 @@ local_costmap:
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.1
+          obstacle_min_range: 0.05
         observation_persistence: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
-        map_topic: "/octomap_grid"
+        map_topic: "/map"
         map_subscribe_transient_local: True
         footprint_clearing_enabled: True
         subscribe_to_updates: False
@@ -219,11 +230,12 @@ global_costmap:
         map_subscribe_transient_local: False
         footprint_clearing_enabled: True
         subscribe_to_updates: False
-        map_topic: "/octomap_grid"
+        #map_topic: "/octomap_grid"
+        map_topic: "/map"
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 4.0
-        inflation_radius: 0.3
+        inflation_radius: 0.2
       voxel_layer:
         plugin: "nav2_costmap_2d::VoxelLayer"
         enabled: True
@@ -234,10 +246,21 @@ global_costmap:
         z_voxels: 16
         max_obstacle_height: 0.25
         mark_threshold: 0
-        observation_sources: cloud
-        cloud:
-          topic: /fusion/points
+        observation_sources: scan cloud
+        scan:
+          topic: /scan
           max_obstacle_height: 0.25
+          min_obstacle_height: 0.17
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 3.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 2.5
+          obstacle_min_range: 0.05
+        cloud:
+          topic: /camera/cloud
+          max_obstacle_height: 0.15
           min_obstacle_height: 0.02
           clearing: true
           marking: true
@@ -245,7 +268,7 @@ global_costmap:
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.1
+          obstacle_min_range: 0.05
         observation_persistence: 0.0
       always_send_full_costmap: True
 
@@ -271,9 +294,9 @@ planner_server:
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
-      tolerance: 0.05
-      use_astar: false
-      allow_unknown: true
+      tolerance: 0.25
+      use_astar: true
+      allow_unknown: false
 
 smoother_server:
   ros__parameters:

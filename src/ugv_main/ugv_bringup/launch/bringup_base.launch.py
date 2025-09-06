@@ -16,7 +16,7 @@ def generate_launch_description():
     # Include the robot state launch from the ugv_description package
     robot_state_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup.launch.py')
+            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup_ugv.launch.py')
         )
     )
 
@@ -73,11 +73,34 @@ def generate_launch_description():
         launch_arguments={
             'pointcloud.enable': 'true',
             'align_depth.enable': 'true',
-            'depth_module.depth_profile': '480x270x6',
-            'rgb_camera.color_profile': '424x240x6',
-            'camera_namespace': '/',
+            'depth_module.depth_profile': '480x270x15',
+            'rgb_camera.color_profile': '424x240x15',
+            'camera_namespace': '/'
         }.items(),
     )
+
+    # well, the realsense ros package has broken point cloud generation
+    # actually, this node is faster, and the point cloud is thinned
+    pointcloud_node = Node(
+        package='rtabmap_util', executable='point_cloud_xyz', output='screen',
+        parameters=[{'decimation': 2,
+                     'max_depth': 3.0,
+                     'voxel_size': 0.02}],
+        remappings=[('depth/image', '/camera/aligned_depth_to_color/image_raw'),
+                    ('depth/camera_info', '/camera/aligned_depth_to_color/camera_info'),
+                    ('cloud', '/camera/cloud')]
+    )
+
+    camera_sync = Node(
+        package='rtabmap_sync', executable='rgbd_sync', output='screen',
+        parameters=[{'approx_sync':False}],
+        remappings=[
+            ('rgb/image', '/camera/color/image_raw'),
+            ('rgb/camera_info', '/camera/color/camera_info'),
+            ('depth/image', '/camera/aligned_depth_to_color/image_raw')
+        ]
+    )
+
 
     # Define the base node with parameters
     base_node = Node(
@@ -94,8 +117,10 @@ def generate_launch_description():
         bringup_node,
         dyn_tf,
         driver_node,
+        pointcloud_node,
         base_node,
         rf2o_laser_odometry_launch,
-        realsense_launch
+        realsense_launch,
+        camera_sync
         #imu_complementary_filter_node
     ])

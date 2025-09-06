@@ -1,0 +1,7 @@
+image: explore_map_20250901_143925.pgm
+resolution: 0.020000
+origin: [-7.391397, -6.632053, 0.000000]
+negate: 0
+occupied_thresh: 50
+free_thresh: 20
+mode: trinary

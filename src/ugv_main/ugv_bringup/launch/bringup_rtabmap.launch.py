@@ -38,15 +38,12 @@ def generate_launch_description():
     parameters={
           'frame_id':'base_footprint',
           'use_sim_time': False,
-          'subscribe_rgbd': False,
-          'subscribe_rgb': True,
-          'subscribe_depth': False,
-          'subscribe_scan': False,
-          'subscribe_scan_cloud':True,
+          'subscribe_rgbd': True,
+          'subscribe_scan': True,
           'use_action_for_goal':True,
           # RTAB-Map's parameters should be strings:
-          'Reg/Strategy':'2', # for cloud only
-          #'Reg/Strategy': '1',
+          #'Reg/Strategy':'2', # for cloud only
+          'Reg/Strategy': '1',
           'RGBD/LinearUpdate' : '0.10',
           'RGBD/AngularUpdate' : '0.10',
           'Mem/STMSize':'0',
@@ -59,8 +56,8 @@ def generate_launch_description():
           #'Grid/3D': 'false',  # Use 2D occupancy
           'Grid/RangeMax':'3',
           'Grid/NormalsSegmentation':'false', # Use passthrough filter to detect obstacles
-          'Grid/Sensor':'0', # scan_cloud
-          #'Grid/Sensor': '1',  # laser scan
+          #'Grid/Sensor':'0', # scan_cloud
+          'Grid/Sensor': '2',  # laser scan and camera
           'Grid/MaxGroundHeight':'0.015', # All points above 1.5 cm are obstacles
           'Grid/MaxGroundAngle': '10',  # All ground tilted more than 10 degrees is an obstacle
           'Grid/MaxObstacleHeight':'0.5',  # All points over 0.5 meter are ignored
@@ -70,13 +67,12 @@ def generate_launch_description():
           'Grid/Voxel': '.02',
           'Optimizer/GravitySigma':'0' # Disable imu constraints (we are already in 2D)
     }
-
-    remappings=[
-          ('rgb/image', '/camera/image'),
-          ('rgb/camera_info', '/camera/camera_info'),
-          ('depth/image', '/camera/depth'),
-          ('scan_cloud', '/fusion/points')]
-          #('octomap_grid', '/map')]
+    # remappings=[
+    #       ('rgb/image', '/camera/image'),
+    #       ('rgb/camera_info', '/camera/camera_info'),
+    #       ('depth/image', '/camera/depth'),
+    #       ('scan_cloud', '/fusion/points')]
+    #       #('octomap_grid', '/map')]
 
     robot_state_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -88,23 +84,24 @@ def generate_launch_description():
     # TODO: move the launch file to a ros2 package, so the launch works from anywhere
     laser_bringup_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ldlidar_stl_ros2'), 'launch', 'ld19.launch.py')
+            'ld19.launch.py'
         )
     )
 
     # realsense launch
     realsense_launch = GroupAction(
         actions=[
-            SetRemap(src='/camera/color/image_raw',dst='/camera/image'),
-            SetRemap(src='/camera/color/camera_info', dst='/camera/camera_info'),
-            SetRemap(src='/camera/aligned_depth_to_color/image_raw', dst='/camera/depth'),
-            SetRemap(src='/camera/depth/color/points', dst='/camera/points'),
+            # these are handled by pointcloud_node and camera_sync
+            # SetRemap(src='/camera/color/image_raw',dst='/camera/image'),
+            # SetRemap(src='/camera/color/camera_info', dst='/camera/camera_info'),
+            # SetRemap(src='/camera/aligned_depth_to_color/image_raw', dst='/camera/depth'),
+            # SetRemap(src='/camera/depth/color/points', dst='/camera/points'),
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
                 ),
                 launch_arguments={
-                    'pointcloud.enable': 'true',
+                    'pointcloud.enable': 'false',
                     'align_depth.enable': 'true',
                     'depth_module.depth_profile': '480x270x15',
                     'rgb_camera.color_profile': '424x240x15',
@@ -112,6 +109,35 @@ def generate_launch_description():
                 }.items()
             )
         ],
+    )
+
+    # well, the realsense ros package has broken point cloud generation
+    # actually, this node is faster, and the point cloud is thinned
+    pointcloud_node = Node(
+        package='rtabmap_util', executable='point_cloud_xyz', output='screen',
+        parameters=[{'decimation': 2,
+                     'max_depth': 3.0,
+                     'voxel_size': 0.02}],
+        remappings=[('depth/image', '/camera/aligned_depth_to_color/image_raw'),
+                    ('depth/camera_info', '/camera/aligned_depth_to_color/camera_info'),
+                    ('cloud', '/camera/cloud')]
+    )
+
+    # obstacles_node = Node(
+    #     package='rtabmap_util', executable='obstacles_detection', output='screen',
+    #     parameters=[parameters],
+    #     remappings=[('cloud', '/camera/cloud'),
+    #                 ('obstacles', '/camera/obstacles'),
+    #                 ('ground', '/camera/ground')])
+
+    camera_sync = Node(
+        package='rtabmap_sync', executable='rgbd_sync', output='screen',
+        parameters=[{'approx_sync':False}],
+        remappings=[
+            ('rgb/image', '/camera/color/image_raw'),
+            ('rgb/camera_info', '/camera/color/camera_info'),
+            ('depth/image', '/camera/aligned_depth_to_color/image_raw')
+        ]
     )
 
     # nav2 launch
@@ -159,11 +185,11 @@ def generate_launch_description():
     )
 
     # point cloud/scan fusion
-    fuser_node = Node(
-        package='point_cloud_tools',
-        executable='cloud_scan_fuser_node',
-        parameters=[{'cloud_stride_u': 8, 'cloud_stride_v': 8}]
-    )
+    # fuser_node = Node(
+    #     package='point_cloud_tools',
+    #     executable='cloud_scan_fuser_node',
+    #     parameters=[{'cloud_stride_u': 8, 'cloud_stride_v': 8}]
+    # )
 
     # register_node = Node(
     #     package='depth_image_proc',
@@ -214,12 +240,14 @@ def generate_launch_description():
         driver_node,
         dyn_tf,
         base_node,
-        fuser_node,
+        #fuser_node,
         robot_state_launch,
         realsense_launch,
         laser_bringup_launch,
         rf2o_laser_odometry_launch,
         nav2_launch,
+        pointcloud_node,
+        camera_sync,
 
         # Nodes to launch
 
@@ -233,7 +261,7 @@ def generate_launch_description():
             condition=UnlessCondition(localization),
             package='rtabmap_slam', executable='rtabmap', output='screen',
             parameters=[parameters],
-            remappings=remappings,
+            #remappings=remappings,
             arguments=['-d']),
             
         # Localization mode:
@@ -243,7 +271,8 @@ def generate_launch_description():
             parameters=[parameters,
               {'Mem/IncrementalMemory':'False',
                'Mem/InitWMWithAllNodes':'True'}],
-            remappings=remappings),
+            #remappings=remappings
+        ),
 
         # Node(
         #     package='rtabmap_viz', executable='rtabmap_viz', output='screen',
