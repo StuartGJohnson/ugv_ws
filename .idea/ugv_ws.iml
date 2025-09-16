@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/src/differential_drive_test" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/src/ugv_main/ugv_bringup" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/install/ugv_bringup/lib/python3.10/site-packages" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/install/rviz_record/local/lib/python3.10/dist-packages" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

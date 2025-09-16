@@ -26,26 +26,18 @@ import os
 
 def generate_launch_description():
 
-    use_sim_time = LaunchConfiguration('use_sim_time')
     localization = LaunchConfiguration('localization')
 
     # todo: on a real robot, we want this false - until
     # we get around to fixing proprioceptive odometry
     pub_odom_tf_arg = DeclareLaunchArgument(
-        'pub_odom_tf', default_value='false',
-        description='Whether to publish the tf from the original odom to the base_footprint',
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    pub_odom_tf_arg_sim = DeclareLaunchArgument(
         'pub_odom_tf', default_value='true',
-        description='Whether to publish the tf from the original odom to the base_footprint',
-        condition=IfCondition(use_sim_time)
+        description='Whether to publish the tf from the original odom to the base_footprint'
     )
 
     parameters={
           'frame_id':'base_footprint',
-          'use_sim_time':use_sim_time,
+          'use_sim_time': True,
           'subscribe_rgbd': False,
           'subscribe_rgb': True,
           'subscribe_depth': False,
@@ -56,11 +48,13 @@ def generate_launch_description():
           'Reg/Strategy':'2', # for cloud only
           #'Reg/Strategy': '1',
           'RGBD/LinearUpdate' : '0.10',
-          'RGBD/AngularUpdate' : '0.10',
+          'RGBD/AngularUpdate' : '0.03',
           'Mem/STMSize':'0',
           'Reg/Force3DoF':'true',
           'RGBD/NeighborLinkRefining':'true',
           'Grid/FromDepth': 'false',
+          # not real, apparently:
+          #'Grid/AlwaysUpdate': 'true',
           'GridGlobal/FullUpdate': 'true',
           'Grid/RayTracing':'true', # Fill empty space
           'Grid/3D':'true', # Use 3D occupancy
@@ -86,111 +80,36 @@ def generate_launch_description():
           ('scan_cloud', '/fusion/points')]
           #('octomap_grid', '/map')]
 
-    robot_state_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ugv_description'), 'launch', 'bringup_ugv.launch.py')
-        ),
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    # lidar launch
-    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
-    laser_bringup_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('ldlidar_stl_ros2'), 'launch', 'ld19.launch.py')
-        ),
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    # realsense launch
-    realsense_launch = GroupAction(
-        actions=[
-            SetRemap(src='/camera/color/image_raw',dst='/camera/image'),
-            SetRemap(src='/camera/color/camera_info', dst='/camera/camera_info'),
-            SetRemap(src='/camera/aligned_depth_to_color/image_raw', dst='/camera/depth'),
-            SetRemap(src='/camera/depth/color/points', dst='/camera/points'),
-            IncludeLaunchDescription(
-                PythonLaunchDescriptionSource(
-                    os.path.join(get_package_share_directory('realsense2_camera'), 'launch', 'rs_launch.py')
-                ),
-                launch_arguments={
-                    'pointcloud.enable': 'true',
-                    'align_depth.enable': 'true',
-                    'depth_module.depth_profile': '480x270x15',
-                    'rgb_camera.color_profile': '424x240x15',
-                    'camera_namespace': '/'
-                }.items()
-            )
-        ],
-        condition=UnlessCondition(use_sim_time)
-    )
-
     # nav2 launch
     nav2_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
         ),
         launch_arguments={
-            'params_file': 'nav2_rtabmap_params.yaml',
-        }.items(),
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    nav2_launch_sim = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
-        ),
-        launch_arguments={
             'params_file': 'nav2_rtabmap_sim_params.yaml',
             'use_sim_time': 'true'
-        }.items(),
-        condition=IfCondition(use_sim_time)
+        }.items()
     )
 
     # Include laser odometry launch file
-    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
-    rf2o_laser_odometry_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            'rf2o_laser_odometry.launch.py'
-        ),
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    bringup_node = Node(
-        package='ugv_bringup',
-        executable='ugv_bringup',
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    dyn_tf = Node(
-        package='ugv_bringup',
-        executable='dynamic_tf_publisher',
-        condition=UnlessCondition(use_sim_time)
-    )
-
-
-    driver_node = Node(
-        package='ugv_bringup',
-        executable='ugv_driver_estop',
-        condition=UnlessCondition(use_sim_time)
-    )
-
-    # Define the base node with parameters
-    base_node = Node(
-        package='ugv_base_node',
-        executable='base_node_no_imu',
-        # TODO: when the base node has odom, might bring this back
-        # right now, laser odometry is doing this
-        # parameters=[{'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}],
-        parameters=[{'pub_odom_tf': False}],
-        condition=UnlessCondition(use_sim_time)
-    )
+    # this generates a lot of laser scan messages and
+    # causes jerky placement of the laser scans in the map
+    # rf2o_laser_odometry_launch = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         'rf2o_laser_odometry_sim.launch.py'
+    #     )
+    # )
 
     # point cloud/scan fusion
     fuser_node = Node(
         package='point_cloud_tools',
         executable='cloud_scan_fuser_node',
-        parameters=[{'cloud_stride_u': 8, 'cloud_stride_v': 8}]
+        parameters=[
+            {'cloud_topic': '/camera/cloud',
+             'cloud_stride_u': 1,
+             'cloud_stride_v': 1
+             }
+        ]
     )
 
     # simulated robot launch
@@ -200,9 +119,7 @@ def generate_launch_description():
         ),
         launch_arguments={
           'world': '/home/sjohnson/WorldGeneration/scene_stuffx.sdf',
-          'world': '/home/sjohnson/WorldGeneration/scene_stuffx.sdf',
-        }.items(),
-        condition=IfCondition(use_sim_time)
+        }.items()
     )
 
     # register_node = Node(
@@ -231,42 +148,30 @@ def generate_launch_description():
     # )
 
     # voxel grid downsample node
-    # pc_node = Node(
-    #     package='point_cloud_tools',
-    #     executable='voxel_grid_filter_node',
-    #     parameters=[{
-    #         'leaf_size': .01,
-    #         'input_topic': '/camera_points',
-    #         'output_topic': 'cloud'
-    #     }]
-    # )
+    pc_node = Node(
+        package='point_cloud_tools',
+        executable='voxel_grid_filter_node',
+        parameters=[{
+            'leaf_size': .02,
+            'input_topic': '/camera/points',
+            'output_topic': '/camera/cloud'
+        }]
+    )
 
     return LaunchDescription([
 
         # Launch arguments
-        DeclareLaunchArgument(
-            'use_sim_time', default_value='false',
-            description='Use simulation (Gazebo) clock if true'),
-
         DeclareLaunchArgument(
             'localization', default_value='false',
             description='Launch in localization mode.'),
 
         # robot base nodes
         pub_odom_tf_arg,
-        pub_odom_tf_arg_sim,
-        bringup_node,
-        driver_node,
-        dyn_tf,
-        base_node,
         fuser_node,
         gazebo_launch,
-        robot_state_launch,
-        realsense_launch,
-        laser_bringup_launch,
-        rf2o_laser_odometry_launch,
         nav2_launch,
-        nav2_launch_sim,
+        pc_node,
+        #rf2o_laser_odometry_launch,
 
         # Nodes to launch
 
