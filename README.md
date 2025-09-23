@@ -28,11 +28,13 @@ In all cases, run from this repository.
 For this project, rtabmap is used as the SLAM component. On the robot:
 
 ```ros2 launch ugv_bringup bringup_rtabmap.launch.py```
+
 ```ros2 run frontier_explorer frontier_explorer_node```
 
 On the manager computer:
 
 ```rviz2 -d rviz_frontier_explorer.rviz```
+
 ```python3 exploration_orchestrator.py --config exploration_orchestrator.yml```
 
 This will write results to a directory called
@@ -46,8 +48,11 @@ In all cases, run from this repository.
 For this project, rtabmap is used as the SLAM component. On the manager computer:
 
 ```ros2 launch ugv_bringup bringup_rtabmap_sim.launch.py```
+
 ```ros2 run frontier_explorer frontier_explorer_node```
+
 ```rviz2 -d rviz_frontier_explorer.rviz```
+
 ```python3 exploration_orchestrator.py --config exploration_orchestrator_sim.yml```
 
 This will write results to a directory called
