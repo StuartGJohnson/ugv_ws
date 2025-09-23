@@ -58,7 +58,7 @@ def generate_launch_description():
           'Grid/NormalsSegmentation':'false', # Use passthrough filter to detect obstacles
           #'Grid/Sensor':'0', # scan_cloud
           'Grid/Sensor': '2',  # laser scan and camera
-          'Grid/MaxGroundHeight':'0.015', # All points above 1.5 cm are obstacles
+          'Grid/MaxGroundHeight':'0.04', # All points above 1.5 cm are obstacles
           'Grid/MaxGroundAngle': '10',  # All ground tilted more than 10 degrees is an obstacle
           'Grid/MaxObstacleHeight':'0.5',  # All points over 0.5 meter are ignored
           'Grid/MinPlaneMinInliers': '100',
