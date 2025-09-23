@@ -1,0 +1,4 @@
+output_home_dir: ./
+use_sim_time: false
+max_exploration_time: 1000
+dry_run: false

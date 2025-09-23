@@ -1,12 +1,16 @@
 
 # ugv_ws
 
-## frontier_explorer
+This repo is a heavily modified version of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>. This repo contains instructions for installation and execution of various components as they are modified for various projects and their goals. The repo is currently heavily in flux. A running explanation of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
 
-On the robot, the current usage is:
+## Installation
 
-```ros2 run frontier_explorer frontier_explorer_node --ros-args -p plan_period:=1.0 -p inflation_radius:=0.2 -p replan_cooldown:=5.0```
+## Usage - Project Indoor Explorer
 
-### results - real robot
+### UGV02x bringup
 
-### results - sim robot
+### frontier_explorer bringup
+
+### rviz2 bringup
+
+### exploration_orchestrator usage

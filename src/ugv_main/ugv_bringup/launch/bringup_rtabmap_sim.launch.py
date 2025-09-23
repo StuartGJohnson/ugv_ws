@@ -118,7 +118,7 @@ def generate_launch_description():
           os.path.join(get_package_share_directory('gazebo_differential_drive_robot_4wheel'), 'launch', 'ugv.launch.py')
         ),
         launch_arguments={
-          'world': '/home/sjohnson/WorldGeneration/scene_stuffx.sdf',
+          'world': '/home/sjohnson/WorldGeneration/scene_stuffx2.sdf',
         }.items()
     )
 

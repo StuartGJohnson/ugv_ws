@@ -1,0 +1,187 @@
+<!--
+Drop-in MP4 player with:
+- Manual frame step (prev/next)
+- Play at fixed FPS (independent of the file's native fps)
+- Optional native playback at variable speed
+- Multiple instances per page supported
+
+Usage: include this whole snippet or split CSS/JS out. For each player, add:
+<div class="mp4-viewer" data-src="/path/to/video.mp4" data-fps="60"></div>
+Then call initMp4Players() after DOM loads.
+-->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MP4 FPS Player</title>
+  <style>
+    :root{ --bg:#0f172a; --muted:#334155; --fg:#e2e8f0; --accent:#38bdf8; --accent2:#22c55e; }
+    .mp4-viewer{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color:var(--fg); background: #0b1220; border:1px solid #1f2937; border-radius:14px; padding:12px; box-shadow:0 8px 24px rgba(0,0,0,.35); width:min(90vmin,900px); }
+    .mp4-wrap{ position:relative; width:100%; aspect-ratio:16/9; background:#111827; border-radius:10px; overflow:hidden; }
+    .mp4-video{ position:absolute; inset:0; width:100%; height:100%; background:#000; display:block; }
+    .mp4-controls{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:10px; }
+    .mp4-btn{ border:1px solid #263042; background:#0f172a; color:var(--fg); padding:6px 10px; border-radius:10px; cursor:pointer; font-size:14px; }
+    .mp4-btn:hover{ border-color:#3b82f6; }
+    .mp4-btn.accent{ border-color:var(--accent); color:#dbeafe; }
+    .mp4-btn.green{ border-color:var(--accent2); color:#dcfce7; }
+    .mp4-range{ flex:1 1 220px; height:6px; accent-color: var(--accent); }
+    .mp4-field{ display:flex; align-items:center; gap:6px; padding:4px 8px; background:#0b1324; border:1px solid #1f2937; border-radius:10px; }
+    .mp4-field input{ width:70px; background:transparent; border:none; color:var(--fg); font:inherit; outline:none; }
+    .mp4-mode{ margin-left:auto; display:flex; gap:6px; align-items:center; }
+    .mp4-badge{ font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px; color:#cbd5e1; }
+  </style>
+</head>
+<body>
+
+  <div class="mp4-viewer" data-src="sample.mp4" data-fps="60"></div>
+
+  <script>
+  (function(){
+    function fmtTime(t){ if(!isFinite(t)) return '0:00'; const m=Math.floor(t/60), s=Math.floor(t%60); return `${m}:${s.toString().padStart(2,'0')}`; }
+
+    function createPlayer(el, opts={}){
+      const src = opts.src || el.dataset.src;
+      const initialFps = Number(opts.fps || el.dataset.fps || 60);
+      const wrap = document.createElement('div'); wrap.className='mp4-wrap';
+      const video = document.createElement('video');
+      video.className='mp4-video';
+      video.preload = 'metadata';
+      video.playsInline = true; // iOS
+      video.muted = true;       // allow autoplay if desired
+      if (src) video.src = src;
+      wrap.appendChild(video);
+
+      const controls = document.createElement('div'); controls.className='mp4-controls';
+      const btnPrev = Object.assign(document.createElement('button'), {className:'mp4-btn', textContent:'⟲ Prev'});
+      const btnPlay = Object.assign(document.createElement('button'), {className:'mp4-btn accent', textContent:'▶︎ Play @ FPS'});
+      const btnPause= Object.assign(document.createElement('button'), {className:'mp4-btn', textContent:'⏸︎ Pause'});
+      const btnNext = Object.assign(document.createElement('button'), {className:'mp4-btn', textContent:'Next ⟳'});
+
+      const slider = Object.assign(document.createElement('input'), {type:'range', min:0, max:1, step:0.0001, value:0, className:'mp4-range'});
+
+      const fpsField = document.createElement('span'); fpsField.className='mp4-field';
+      const fpsLabel = document.createElement('span'); fpsLabel.textContent='FPS';
+      const fpsInput = Object.assign(document.createElement('input'), {type:'number', min:1, max:240, step:1, value:initialFps});
+      fpsField.append(fpsLabel, fpsInput);
+
+      const speedField = document.createElement('span'); speedField.className='mp4-field';
+      const spLabel = document.createElement('span'); spLabel.textContent='Speed×';
+      const spInput = Object.assign(document.createElement('input'), {type:'number', min:0.1, max:32, step:0.1, value:8});
+      speedField.append(spLabel, spInput);
+
+      const modeBox = document.createElement('span'); modeBox.className='mp4-mode';
+      const modeBadge = Object.assign(document.createElement('span'), {className:'mp4-badge', textContent:'Mode: FPS Timer'});
+      const btnMode = Object.assign(document.createElement('button'), {className:'mp4-btn green', textContent:'Switch to Native'});
+      modeBox.append(modeBadge, btnMode);
+
+      const timeBadge = Object.assign(document.createElement('span'), {className:'mp4-badge', textContent:'0:00 / 0:00'});
+
+      controls.append(btnPrev, btnPlay, btnPause, btnNext, slider, fpsField, speedField, timeBadge, modeBox);
+
+      el.innerHTML=''; el.append(wrap, controls);
+
+      // State
+      let targetFps = initialFps;
+      let playingFps = false;
+      let stepTimer = null;
+      let nativeMode = false;
+
+      function clearTimers(){ if(stepTimer){ clearTimeout(stepTimer); stepTimer=null; } }
+
+      function stepBy(delta){
+        if(!video.duration) return;
+        const frame = 1 / Math.max(1, targetFps);
+        const t = Math.min(video.duration, Math.max(0, video.currentTime + delta * frame));
+        video.currentTime = t;
+      }
+
+      function updateSlider(){
+        if(!video.duration) return;
+        slider.value = (video.currentTime / video.duration).toFixed(4);
+        timeBadge.textContent = `${fmtTime(video.currentTime)} / ${fmtTime(video.duration)}`;
+      }
+
+      function fpsLoop(){
+        if(!playingFps) return;
+        if(!isFinite(video.duration) || video.duration === 0){ stepTimer = setTimeout(fpsLoop, 50); return; }
+        const frame = 1 / Math.max(1, targetFps);
+        const start = performance.now();
+        // advance one frame-equivalent in time
+        const nextT = Math.min(video.currentTime + frame, video.duration);
+        video.currentTime = nextT;
+        if(nextT >= video.duration){ playingFps=false; return; }
+        const schedule = ()=>{
+          const elapsed = performance.now() - start;
+          const delay = Math.max(0, (1000/targetFps) - elapsed);
+          stepTimer = setTimeout(fpsLoop, delay);
+        };
+        if (typeof video.requestVideoFrameCallback === 'function'){
+          video.requestVideoFrameCallback(() => schedule());
+        } else {
+          const onSeeked = ()=>{ video.removeEventListener('seeked', onSeeked); schedule(); };
+          video.addEventListener('seeked', onSeeked, { once:true });
+        }
+      }
+
+      function playAtFps(){
+        nativeMode = false;
+        modeBadge.textContent = 'Mode: FPS Timer';
+        btnPlay.textContent = `▶︎ Play @ ${targetFps} FPS`;
+        clearTimers();
+        video.pause();
+        playingFps = true;
+        fpsLoop();
+      }
+
+      function pauseAll(){ playingFps = false; clearTimers(); video.pause(); }
+
+      function switchMode(){
+        pauseAll();
+        nativeMode = !nativeMode;
+        if (nativeMode){
+          modeBadge.textContent = 'Mode: Native rate';
+          btnMode.textContent = 'Switch to FPS';
+        } else {
+          modeBadge.textContent = 'Mode: FPS Timer';
+          btnMode.textContent = 'Switch to Native';
+        }
+      }
+
+      // Events
+      btnPrev.onclick = ()=> stepBy(-1);
+      btnNext.onclick = ()=> stepBy(+1);
+      btnPlay.onclick = ()=> nativeMode ? (video.playbackRate = Number(spInput.value)||1, video.play()) : playAtFps();
+      btnPause.onclick= ()=> pauseAll();
+      btnMode.onclick = ()=> switchMode();
+      fpsInput.onchange = ()=> { targetFps = Math.max(1, Number(fpsInput.value)||60); if(playingFps) playAtFps(); };
+      spInput.onchange  = ()=> { if(nativeMode){ video.playbackRate = Math.min(32, Math.max(0.1, Number(spInput.value)||1)); } };
+      slider.oninput = ()=>{ if(!video.duration) return; video.currentTime = slider.value * video.duration; };
+
+      // Mouse wheel scrubbing over the video
+      wrap.addEventListener('wheel', (e)=>{ e.preventDefault(); const dir = Math.sign(e.deltaY); stepBy(dir); }, { passive:false });
+
+      video.addEventListener('timeupdate', updateSlider);
+      video.addEventListener('loadedmetadata', updateSlider);
+      video.addEventListener('ended', ()=> pauseAll());
+
+      // Expose a tiny API on the element (optional)
+      el._mp4 = {
+        video,
+        playAtFps, pause: pauseAll,
+        setFps: (v)=>{ fpsInput.value = v; fpsInput.onchange(); },
+        nativePlay: (speed)=>{ switchMode(); video.playbackRate = speed||8; video.play(); }
+      };
+    }
+
+    window.initMp4Players = function initMp4Players(){
+      document.querySelectorAll('.mp4-viewer').forEach(el=> createPlayer(el, {}));
+    };
+
+    // Auto-init when DOM is ready
+    if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initMp4Players);
+    else initMp4Players();
+  })();
+  </script>
+</body>
+</html>

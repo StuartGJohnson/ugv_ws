@@ -137,6 +137,7 @@ def cloud_to_pcd(serialized: bytes, type_str: str, out_path: str) -> None:
     msg: PointCloud2 = deserialize_message(serialized, msg_cls)
 
     has_rgb = any(f.name in ('rgb', 'rgba') for f in msg.fields)
+    has_rgb = False
     if has_rgb:
         print('rgb detect')
         pts = point_cloud2.read_points(msg, field_names=('x', 'y', 'z', 'rgb'), skip_nans=True)
