@@ -7,10 +7,70 @@ This repo is a heavily modified version of <a href="https://github.com/waveshare
 
 ## Usage - Project Indoor Explorer
 
-### UGV02x bringup
+### Build - simulation/manager computer
 
-### frontier_explorer bringup
+```colcon build --packages-select ugv_base_node ugv_bringup ugv_description differential_drive_test ldlidar_stl_ros2 rf2o_laser_odometry safety gazebo_differential_drive_robot_4wheel point_cloud_tools frontier_explorer rviz_record --cmake-args -DCMAKE_BUILD_TYPE=Release```
 
-### rviz2 bringup
+Note: this list will be pruned.
 
-### exploration_orchestrator usage
+```source install/setup.bash```
+
+### Build - robot computer
+
+```colcon build --packages-select ugv_base_node ugv_bringup ugv_description ldlidar_stl_ros2 rf2o_laser_odometry safety point_cloud_tools frontier_explorer --cmake-args -DCMAKE_BUILD_TYPE=Release```
+
+```source install/setup.bash```
+
+### bringup and operation : mobile mode
+
+In all cases, run from this repository.
+
+For this project, rtabmap is used as the SLAM component. On the robot:
+
+```ros2 launch ugv_bringup bringup_rtabmap.launch.py```
+```ros2 run frontier_explorer frontier_explorer_node```
+
+On the manager computer:
+
+```rviz2 -d rviz_frontier_explorer.rviz```
+```python3 exploration_orchestrator.py --config exploration_orchestrator.yml```
+
+This will write results to a directory called
+
+```explore_YYYYMMDD_hhmmss```
+
+### bringup and operation : simulation mode
+
+In all cases, run from this repository.
+
+For this project, rtabmap is used as the SLAM component. On the manager computer:
+
+```ros2 launch ugv_bringup bringup_rtabmap_sim.launch.py```
+```ros2 run frontier_explorer frontier_explorer_node```
+```rviz2 -d rviz_frontier_explorer.rviz```
+```python3 exploration_orchestrator.py --config exploration_orchestrator_sim.yml```
+
+This will write results to a directory called
+
+```explore_YYYYMMDD_hhmmss```
+
+### misc tools usage
+
+Several useful tools are included to help post-process various files into nice plots.
+
+<code>bag_to_map.py</code> converts occupancy grids in a bag snapshot to png files. See:
+
+```python3 bag_to_map.py --help```
+
+<code>bag_to_map.py</code> converts PointCloud2 items in a bag snapshot to pcd files. See:
+
+```python3 bag_to_pcd.py --help```
+
+<code>map_convert.py</code> puts nice axes on your occupancy grids and outputs to png. See:
+
+```python3 map_convert.py --help```
+
+## Credits
+
+Code herein benefited from the extensive contributions of GPT4o and GPT5 (OpenAI, May-September 2025).
+
