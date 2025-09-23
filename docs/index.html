@@ -897,7 +897,7 @@
         <ul>
             <li>The choice of nav2 planner can be the source of much tuning effort. Originally I was using the <code>DWBLocalPlanner</code>. While this planner might be more robust once tuned, I found it to be a challenge to tune it's many parameters. Using the much simpler RegulatedPurePursuitController solved the tuning issues for me. </li>
             <li>While challenging - and seemingly unnecessary - in simulation, the RotationShimController appears to be useful for navigation in tight spots, since the robot can rotate in place before beginning on a trajectory. But, more experimentation may prove otherwise.</li>
-            <li>The <code>planner_server:GridBased:allow_unknown</code> setting (when false) prevents the route planner from planning routes through unknown map areas. It is quite exciting to see the planner plan a route out the front door, around the house, and in the back door! Umm, don't do that. Oh, and don't forget to close the doors if you have an indoor exploration project!</li>
+            <li>The <code>planner_server:GridBased:allow_unknown</code> setting (when false) prevents the route planner from planning routes through unknown map areas. It is quite exciting to see the planner plan a route outside the structure! Umm, don't do that. Oh, and don't forget to close the doors if you want have an indoor exploration project!</li>
         </ul>
     </li>
     <li>Nav2 general tuning challenges
@@ -934,16 +934,16 @@
 
 <h2>Results</h2>
 
-<h3>Exploration of my house</h3>
+<h3>Indoor exploration</h3>
 
-<p> Figure 19 shows exploration of my house by the robot. The house is a bit cluttered with some low-lying (below-the-lidar) items. The robot cautiously discovers most reachable parts of the house.</p>
+<p> Figure 19 shows the results of indoor exploration by the robot. The environment is a bit cluttered with some low-lying (below-the-lidar) items. The robot cautiously discovers all reachable areas.</p>
 
 <figure class="figure">
     <div class="mp4-mini" data-src="explore_20250915_191609/rviz.mp4" data-speed="8" data-autoplay="true" data-blob="true"></div>
-    <figcaption class="mmd-caption">Fig 19: A movie of exploration of my house. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
+    <figcaption class="mmd-caption">Fig 19: A movie of indoor exploration. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
 </figure>
 
-<p>While the exploration is for the most part successful, there are some interesting behaviors to be addressed in upcoming projects. First, the lidar-based odometry does seem noisy, with the robot jumping around a bit (say ~2cm magnitude). This may be the reason the robot sometimes moves very hesitantly when trying to skirt around obstacles. An upcoming odometry/sensor fusion project will look into this. Second, there are some strips between floor sections in the house of roughly 1cm in height. As the robot passes over these, the depth camera sees phantom obstacles as the robot vertical is not corrected for (the floor ahead seems "high" as the robot rocks forward off the strip). This is potentially addressable via the on-board IMUs, although Nav2 did not decide to make this phantom obstacle permanent - it cleared almost immediately as the robot ran on the flat floor after the strip. This sort of thing will really become important on natural outdoor terrain. Finally, the map is fairly well constructed, although loop closure is clearly a challenge for rtabmap in various areas - with multiple images of walls appearing. The house is roughly U-shaped, and the arms of the U are distorted. But the basic connectivity of the house is preserved. </p>
+<p>While the exploration is for the most part successful, there are some interesting behaviors to be addressed in upcoming projects. First, the lidar-based odometry does seem noisy, with the robot jumping around a bit (say ~2cm magnitude). This may be the reason the robot sometimes moves very hesitantly when trying to skirt around obstacles. An upcoming odometry/sensor fusion project will look into this. Second, there are some strips between floor sections in this indoor environment of roughly 1cm in height. As the robot passes over these, the depth camera sees phantom obstacles - the robot vertical is not corrected for (the floor ahead seems "high" as the robot rocks forward off the strip). This is potentially addressable via the on-board (camera and robot) IMUs, although Nav2 did not decide to make this phantom obstacle permanent - it cleared almost immediately as the robot ran on the flat floor after crossing the strip. This sort of thing will really become important on natural outdoor terrain. Finally, the map is fairly well constructed, although loop closure is clearly a challenge for rtabmap in various areas - with multiple images of walls appearing. This indoor environment is roughly U-shaped, and the arms of the U are distorted. But the basic connectivity of the open space is preserved. </p>
 
 <h3>Exploration of the simulated scene</h3>
 
@@ -956,7 +956,7 @@
 
 <p>This exploration shows that the robot can explore tight spaces and deal with obstacles only visible in the depth camera - it is quite adaptable with path replanning. Note that rtabmap has had significant issues with loop closure. For this combination of sensors and scene, it's possible a different SLAM algorithm would be better. The features in a simulated scene can be less rich - for this purpose I added the floor texture. But the primary problem for rtabmap may be the preponderance of flat floor in the depth map from the camera. </p>
 
-<h3>Other interesting exploration products: real robot/house</h3>
+<h3>Other interesting exploration products: real robot/indoors</h3>
 
 <p> On completion of mapping, the orchestrator collects a number of 2D and 3D mapping products.
 octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20). </p>
