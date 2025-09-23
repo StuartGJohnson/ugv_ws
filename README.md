@@ -3,9 +3,30 @@
 
 This repo is a heavily modified version of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>. This repo contains instructions for installation and execution of various components as they are modified for various projects and their goals. The repo is currently heavily in flux. A running explanation of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
 
-## Installation
+## Project Indoor Explorer
 
-## Usage - Project Indoor Explorer
+### Installation
+
+ROS2 packages are needed both from git and from apt install.
+
+You will need - or may already have (via sudo apt install):
+- ros-humble-rtabmap
+- ros-humble-navigation2
+
+For the robot, you should have (in ugv_ws/src):
+
+- [frontier_explorer](https://github.com/StuartGJohnson/frontier_explorer.git)
+- [ldlidar_stl_ros2](https://github.com/ldrobotSensorTeam/ldlidar_stl_ros2.git)
+- [rf2o_laser_odometry](https://github.com/MAPIRlab/rf2o_laser_odometry.git)
+- [safety](https://github.com/StuartGJohnson/safety.git)
+
+For the manager/simulation node (these should really be split - I'll get to it):
+- [frontier_explorer](https://github.com/StuartGJohnson/frontier_explorer.git)
+- [point_cloud_tools](https://github.com/StuartGJohnson/point_cloud_tools.git)
+- [gazebo_differential_drive_robot_4wheel](https://github.com/StuartGJohnson/gazebo_differential_drive_robot_4wheel.git)
+- [rviz_record](https://github.com/StuartGJohnson/rviz_record.git)
+
+You will also need to install Gazebo Garden and rviz2.
 
 ### Build - simulation/manager computer
 
