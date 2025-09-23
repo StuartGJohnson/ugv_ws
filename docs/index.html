@@ -877,9 +877,9 @@
             <li>In order to produce 2D map products for Nav2 and frontier_explorer, obstacle/ground heights need to be set. These settings are redundant with Nav2 costmap settings.</li>
             <li>Grid/Sensor, Reg/Strategy and the subscribe_* settings need to be coordinated and set with care </li>
         </ul>
-    <li>Nav2 local costmap. The local costmap reflects recent, nearby obstacles. Notes:
+    <li>Nav2 local costmap. The local costmap should reflect recent, nearby obstacles. Notes:
         <ul>
-            <li>Setting indentation is critical. settings at the wrong indent are silently ignored.</li>
+            <li>Setting indentation in the files is critical. Settings at the wrong indent are silently ignored.</li>
             <li>For <em>each data source</em>, <code>observation_persistence</code> (in seconds) should be non-zero, but not too large. Large values will cause errors as Nav2 attempts to process objects outside the local map. Without <code>observation_persistence</code>, the planner forgets obstacles outside of the field of view of the sensors immediately! This makes it a challenge for navigation in tight spots - or even near obstacles. Detailed nearby obstacle information is only available in the field of view of the depth camera - a modest-sized patch of ground immediately in front of the robot. Considerations for the global costmap are a bit different (read on).</li>
             <li>For inputs to the (3D) VoxelLayer, each data source should have its z-range specified carefully. For example, the 2D lidar should not generally clear obstacles from the map which have been detected below the 2D lidar height (i.e., by the depth camera).</li>
             <li> Obstacle height settings are redundant with rtabmap settings. </li>
@@ -889,7 +889,7 @@
         <ul>
             <li>For <em>each data source</em>, <code>observation_persistence</code> (in seconds) should (probably) be larger than for the local costmap (the global costmap is updated much more slowly), however:</li>
             <li>The long term memory of the global costmap is the selected occupancy map - see the <code>nav2_costmap_2d::StaticLayer</code> incantation.</li>
-            <li>In my case, I want the global costmap to also store low obstacles captured in the depth camera. So, I use rtabmap's 3D->2D occupancy_grid as the occupancy map input to the static layer.</li>
+            <li>In my case, I want the global costmap to also store low obstacles captured in the depth camera. So, I use rtabmap's 3D->2D octomap_grid as the occupancy map input to the static layer.</li>
             <li> Obstacle height settings are redundant with rtabmap settings. </li>
         </ul>
     </li>
