@@ -2,3 +2,8 @@ build/
 install/
 log/
 *.log
+maps/
+explore_*/
+rosbag*/
+bags/
+

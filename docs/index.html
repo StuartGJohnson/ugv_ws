@@ -4,6 +4,41 @@
     <meta charset="utf-8"/>
     <title>UGV02x</title>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <style>
+      /* Dark-theme friendly: inherit colors, no sticky */
+      .toc { margin: 1rem 0; padding: 0; }
+      .toc ul { list-style: none; margin: 0; padding-left: 0; }
+      .toc li { margin: 0.125rem 0; }
+      .toc a { color: inherit; text-decoration: none; display: block; line-height: 1.25; }
+      .toc a:hover { text-decoration: underline; }
+
+      /* Indentation + subtle size by level */
+      .toc ul ul { padding-left: 1rem; }
+      .toc a.lvl-1 { font-weight: 600; font-size: 1.00em; }
+      .toc a.lvl-2 { font-weight: 500; font-size: 0.97em; opacity: .95; }
+      .toc a.lvl-3 { font-weight: 500; font-size: 0.94em; opacity: .88; }
+      .toc a.lvl-4 { font-weight: 400; font-size: 0.92em; opacity: .80; }
+      .toc a.lvl-5 { font-weight: 400; font-size: 0.90em; opacity: .75; }
+      .toc a.lvl-6 { font-weight: 400; font-size: 0.88em; opacity: .70; }
+
+      /* If you have a fixed header, make anchors land below it: adjust as needed */
+      h1, h2, h3, h4, h5, h6 { scroll-margin-top: 64px; }
+    </style>
+
+    <style>
+      /* optional, but makes it look terminal-ish and preserves tabs */
+      .term {
+        white-space: pre;       /* keep spaces/newlines exactly */
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        tab-size: 4;
+        padding: .75rem;
+        border: 1px solid #444;
+        border-radius: 8px;
+        overflow: auto;         /* horizontal scroll instead of wrapping */
+      }
+    </style>
+
     <style>
         :root {
             color-scheme: dark;
@@ -232,6 +267,7 @@
       }
 
       /* Table core */
+      /* Table core */
       .tbl{
         border-collapse:separate; border-spacing:0; width:100%;
         font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
@@ -308,10 +344,15 @@
 <!-- Include the module once on the page -->
 <script type="module" src="viewer-pcd.js"></script>
 
+<h1>UGV02x Projects</h1>
+
+<nav id="toc" aria-label="Table of contents"></nav>
+
+<main>
 <h1>Project Indoor Explorer</h1>
 
 <h2>Intent of this page</h2>
-<p>This page attempts to document the project from a conceptual perspective. Code installation and usage are left to the parent repository at <a href="https://github.com/StuartGJohnson/ugv_ws">ugv_ws</a> or repositories referenced therein.</p>
+<p>This page attempts to document the project from a conceptual perspective. Code installation and usage are left (mostly) to the parent repository at <a href="https://github.com/StuartGJohnson/ugv_ws">ugv_ws</a> or repositories referenced therein.</p>
 
 <h2>Project Goal</h2>
 <p>Autonomously explore and map an indoor environment in simulation and reality. Prior knowledge of the environment - or previous exploration and mapping by a human operator - is not allowed.</p>
@@ -449,6 +490,14 @@
           <td>Central Computers</td>
           <td>USB 3.2 Gen 2 Type-C Cable</td>
           <td>3 ft. Depth Camera/Orin Power cable (cable ratings: 20Gbps, 20v 5A)</td>
+          <td>2</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Central Computers</td>
+          <td>USB Type-C 90 degree Male to Female Adapter</td>
+          <td>Depth Camera data cable management adapter (ratings: 40Gbps, 48v 5A)</td>
           <td>2</td>
         </tr>
       </tbody>
@@ -699,7 +748,7 @@
 
 <p>As shown in figures 10 and 11, odometry computation - and subsequent updates to the /tf tree - happen differently for the real and simulated robots. For the real robot, odometry is entirely calculated from the laser scan updates via <code>rf2o_laser_odometry</code>. As mentioned above, this is a temporary workaround. For the simulated robot, odometry is calculated by integrating the <code>cmd_vel</code> commands sent to the robot. This integration has been calibrated by adjusting the wheel separation for the simulated robot, as the friction and slip characteristics of the floor are fixed and known. From the point of view of the ROS2 nav2 SW stack, it is useful to review the purpose of odometry: <a href="https://docs.nav2.org/concepts/index.html#odometry">odometry for nav2</a>.</p>
 
-<h1>Depth camera and Lidar processing: sim vs real</h1>
+<h2>Depth camera and Lidar processing: sim vs real</h2>
 
 <p>Depth camera and Lidar processing is implemented differently for the simulated and real robots. This stems from two issues: </p>
 <ol>
@@ -763,29 +812,164 @@
     </figure>
 </div>
 
+<h2>Depth camera calibration</h2>
+
+<p>The Intel Realsense camera is not quite viewing the world from the perspective one might expect. In particular, when running in the mode used in this project, the resulting depth cloud is not centered on the camera housing - it is more or less centered on the left camera aperture. In any case, the way to not think about this is to develop a calibration procedure for the static transform tree of the depth camera sensor. Also, since my connection of robot components is somewhat un-square, it is best to assume it is at least somewhat wompy-jawed.</p>
+
+<h3>Exteroceptive sensor transform tree</h3>
+<p>The real and simulated robots <i>almost</i> share an xacro file - that is, the file which defines the component physical relationships and properties. The difference between the two files are the transform settings of a <i>calibration</i> joint for the depth camera. This calibration is defined in both files. The simulated robot has a unit calibration transformation, whereas the real robot does not. The goal of calibration is to find the calibration transform. In this section, we only discuss the depth camera calibration. Also, we assume that the intrinsic and extrinsic calibration(s) of the depth camera have already been done - there are tools for this in the intel SW.</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart BT
+      BF(["base_footprint"]) --> BFJ["base_footprint_joint"]
+      BFJ --> BL(["base_link"])
+      BL --> BJ["battery_joint"]
+      BJ --> BAL(["battery_link"])
+      BAL --> OJ["orin_joint"]
+      OJ --> OL(["orin_link"])
+      OL --> LJ["lidar_joint"]
+      LJ --> LL(["lidar_link"])
+      OL --> DJ["d435_joint"]
+      DJ --> CPL(["camera_pre_link"])
+      CPL --> DCJ[["d435_calibration_joint"]]
+      DCJ --> CL(["camera_link"])
+    </pre>
+    <figcaption class="mmd-caption">Fig 14: The exteroceptive sensor transform tree. Each rounded node is a coordinate frame. Each rectangular node is fixed joint - a transform between frames. The calibration joint in question is in a special rectangle.</figcaption>
+</figure>
+
+<h3>Calibration process</h3>
+<p>The process for determining the calibration transform is as follows:
+</p>
+<ul>
+    <li> Set up the real robot in the calibration scene. See figure 15.</li>
+    <li> Bring up the robot sensors:
+        <ul>
+            <li>
+                <code>ros2 launch ugv_bringup bringup_sensors.launch.py</code>
+            </li>
+        </ul>
+    </li>
+    <li> Grab a point cloud from the depth camera <i>in the camera_pre_link frame</i>:
+        <ul>
+            <li>
+            <code>python3 save_pcd_tf.py -t /camera/cloud -F camera_pre_link -o cloud_real_bin_cal_repo1.pcd --binary --latest</code>
+            </li>
+        </ul>
+    </li>
+    <li>Shut down the real robot.</li>
+    <li> Bring up the sim robot (sensors) in the simulated calibration scene (figure 16):
+        <ul>
+            <li>
+                <code>ros2 launch ugv_bringup bringup_sensors_sim.launch.py</code>
+            </li>
+        </ul>
+    </li>
+    <li> Grab a point cloud from the simulated depth camera <i>in the camera_pre_link frame</i>:
+        <ul>
+            <li>
+            <code>python3 save_pcd_tf.py -t /camera/cloud -F camera_pre_link -o cloud_sim_bin_cal_repo1.pcd --binary --latest</code>
+            </li>
+        </ul>
+    </li>
+    <li>Shut down the simulated robot.</li>
+    <li>Register the two point clouds, and compute a transform <i>in the camera_pre_link frame</i>. I use ICP in the point-to-plane mode (see the source code mentioned):
+         <ul>
+            <li>
+            <code>python3 register_pcd.py -s cloud_real_bin_cal_repo1.pcd -t cloud_sim_bin_cal_repo1.pcd -d</code>
+            </li>
+        </ul>
+    </li>
+    <li> This results in the following (for example):
+        <pre class="term"><samp>
+ICP fitness: 1.0 RMSE: 0.010631891033362824
+T_sensor_to_scene:
+ [[ 9.99930746e-01 -4.64087563e-03  1.08151039e-02 -8.72929755e-04]
+ [ 4.43469507e-03  9.99809444e-01  1.90107587e-02  2.17824679e-03]
+ [-1.09012695e-02 -1.89614804e-02  9.99760784e-01  5.88481766e-03]
+ [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
+xyz/rpy: [-0.00087293  0.00217825  0.00588482] [-0.01896374  0.01090149  0.00443497]
+        </samp></pre>
+    </li>
+    <li> Update the <i>real robot</i> xacro file:
+        <pre class="term"><samp>
+&lt;!-- camera calibration joint --&gt;
+&lt;joint name="d435_calibration_joint" type="fixed"&gt;
+	&lt;origin xyz="-0.00087293  0.00217825  0.00588482" rpy="-0.01896374  0.01090149  0.00443497"/&gt;
+    &lt;parent link="camera_pre_link"/&gt;
+    &lt;child link="camera_link"/&gt;
+&lt;/joint>
+        </samp></pre>
+    </li>
+        <li> The sim robot xacro file does not change:
+        <pre class="term"><samp>
+&lt;!-- camera calibration joint --&gt;
+&lt;joint name="d435_calibration_joint" type="fixed"&gt;
+	&lt;origin xyz=0 0 0" rpy="0 0 0"/&gt;
+    &lt;parent link="camera_pre_link"/&gt;
+    &lt;child link="camera_link"/&gt;
+&lt;/joint>
+        </samp></pre>
+    </li>
+</ul>
+
+<p>The results of this process are shown in the following 3 figures.</p>
+
+
+
+<figure class="figure">
+<img src="real_robot_calibration_snapshot.jpg"
+     alt="real_robot_calibration_snapshot" width="500">
+    <figcaption class="mmd-caption">Fig 15: The real calibration scene.</figcaption>
+</figure>
+
+<figure class="figure">
+<img src="robot_calibration_snapshot.png"
+     alt="robot_calibration_snapshot" width="500">
+    <figcaption class="mmd-caption">Fig 16: The simulated calibration scene.</figcaption>
+</figure>
+
+<figure class="figure">
+<img src="robot_calibration_pcd_raw.png"
+     alt="robot_calibration_pcd_raw" width="500">
+    <figcaption class="mmd-caption">Fig 17: Raw point clouds (before calibration).</figcaption>
+</figure>
+
+<figure class="figure">
+<img src="robot_calibration_pcd_cal.png"
+     alt="robot_calibration_pcd_cal" width="500">
+    <figcaption class="mmd-caption">Fig 18: Calibrated point clouds.</figcaption>
+</figure>
+
+<figure class="figure">
+<img src="real_robot_calibrated.jpg"
+     alt="real_robot_calibrated" width="500">
+    <figcaption class="mmd-caption">Fig 19: The real robot after calibration and camera repositioning. The centerline of the robot is the right side of the yellow tape on the robot chassis.</figcaption>
+</figure>
+
 <h2>Exploration and Navigation</h2>
 
 <h3>Exploration and Navigation: Algorithm overview</h3>
 
-<p>The computation graphs for the real and simulated robot are shown in figures 14 and 15. These are constructed automatically via <code>rqt</code> from a running ros2 SW stack. Click on them and pan and zoom away. </p>
+<p>The computation graphs for the real and simulated robot are shown in figures 20 and 21. These are constructed automatically via <code>rqt</code> from a running ros2 SW stack. Click on them and pan and zoom away. </p>
 
 <figure class = "figure">
     <a href="rosgraph.svg" data-svg="rosgraph.svg">
     <img src="rosgraph.svg" alt="ROS Graph thumbnail" width="400"> </a>
-    <figcaption class="mmd-caption">Fig 14: Real robot computation graph (navigable SVG).</figcaption>
+    <figcaption class="mmd-caption">Fig 20: Real robot computation graph (navigable SVG).</figcaption>
 </figure>
 
-<p>The detail in these graphs (figures 14 and 15) is pretty challenging to digest, but becomes increasingly useful as you tune up your SW stack to the goals at hand. Zoomed-in parts of this computation graph are shown below.</p>
+<p>The detail in these graphs (figures 20 and 21) is pretty challenging to digest, but becomes increasingly useful as you tune up your SW stack to the goals at hand. Zoomed-in parts of this computation graph are shown below.</p>
 
 <figure class = "figure">
     <a href="rosgraph_sim.svg" data-svg="rosgraph_sim.svg">
     <img src="rosgraph_sim.svg" alt="ROS Graph thumbnail" width="400"> </a>
-    <figcaption class="mmd-caption">Fig 15: Simulated robot computation graph (navigable SVG).</figcaption>
+    <figcaption class="mmd-caption">Fig 21: Simulated robot computation graph (navigable SVG).</figcaption>
 </figure>
 
 <p>In order to attain the project goals, I have used a custom autonomous frontier exploration implementation<a href="https://github.com/StuartGJohnson/frontier_explorer"> Frontier exploration</a>. While there are many similar frontier exploration packages out there, many of them depend on an initial exploration of the environment by a human (tele)operator. This is not allowed by the project goals. The <code>explore_lite</code> node is an example of this - while it doesn't strictly demand initial human exploration, this node implicitly assumes that it makes sense to characterize frontier areas by their centroids. Well, what if you start out in a uniformly unknown environment? You are at the centroid of the frontier already!</p>
 
-<p>The <code>frontier_explorer</code> node depends on <a href="https://docs.nav2.org">Nav2</a> to interact with the environment as the <code>frontier_explorer</code> generates and attempts goals. Nav2 is a complex SW stack with many interacting components. A Nav2-based project involves selecting, assembling and tuning navigation algorithms. Some algorithms may eventually yield better results, but are more challenging to tune. The simplified diagram below (figure 16) attempts to represent Nav2 operation for the purposes of this project. </p>
+<p>The <code>frontier_explorer</code> node depends on <a href="https://docs.nav2.org">Nav2</a> to interact with the environment as the <code>frontier_explorer</code> generates and attempts goals. Nav2 is a complex SW stack with many interacting components. A Nav2-based project involves selecting, assembling and tuning navigation algorithms. Some algorithms may eventually yield better results, but are more challenging to tune. The simplified diagram below (figure 22) attempts to represent Nav2 operation for the purposes of this project. </p>
 
 <figure class="mmd-figure">
     <pre class="mmd">
@@ -821,10 +1005,10 @@
       NP --> VS["Nav2 Velocity Smoother"]
       VS --> CV["/cmd_vel (robot)"]
     </pre>
-    <figcaption class="mmd-caption">Fig 16: Nav2 at work.</figcaption>
+    <figcaption class="mmd-caption">Fig 22: Nav2 at work.</figcaption>
 </figure>
 
-<p><code>frontier_explorer</code> generates goals for Nav2 until the frontiers in the map are exhausted. Fig 17 shows (roughly) the functionality of <code>frontier_explorer</code>. </p>
+<p><code>frontier_explorer</code> generates goals for Nav2 until the frontiers in the map are exhausted. Fig 23 shows (roughly) the functionality of <code>frontier_explorer</code>. </p>
 
 <figure class="mmd-figure">
     <pre class="mmd">
@@ -836,10 +1020,10 @@
       F --> H["blacklisted regions"] -.-> RV
       F --> I["frontier regions"] -.-> RV
     </pre>
-    <figcaption class="mmd-caption">Fig 17: <code>frontier_explorer</code> at work. Rviz2 may not be running on the same host (i.e, the (real) robot).</figcaption>
+    <figcaption class="mmd-caption">Fig 23: <code>frontier_explorer</code> at work. Rviz2 may not be running on the same host (i.e, the (real) robot).</figcaption>
 </figure>
 
-<p>Figure 17 also shows the production of map overlays (goals, blacklisted regions and frontier regions) which are displayed via rviz2 (generally on a non-robot host on the LAN). These products (as well as Nav2 Rviz2 products) are shown in the exploration movies in the results section below. </p>
+<p>Figure 23 also shows the production of map overlays (goals, blacklisted regions and frontier regions) which are displayed via rviz2 (generally on a non-robot host on the LAN). These products (as well as Nav2 Rviz2 products) are shown in the exploration movies in the results section below. </p>
 
 <h3>Exploration and Navigation: Algorithm tuning</h3>
 
@@ -910,7 +1094,7 @@
 
 <h3>Exploration and Navigation: Orchestration</h3>
 
-<p>The project goal is achieved by the <code>exploration_orchestrator.py</code>. This script coordinates and documents the exploration episode by interacting with the frontier_explorer and the rviz2 rviz_record plugin. On completion of exploration - while all nodes are still running - it also triggers the collection of a bag file snapshot of interesting quantities via <code>rosbag2_py</code>. Figure 18 shows this functionality when operating the real robot in mobile mode: <p>
+<p>The project goal is achieved by the <code>exploration_orchestrator.py</code>. This script coordinates and documents the exploration episode by interacting with the frontier_explorer and the rviz2 rviz_record plugin. On completion of exploration - while all nodes are still running - it also triggers the collection of a bag file snapshot of interesting quantities via <code>rosbag2_py</code>. Figure 24 shows this functionality when operating the real robot in mobile mode: <p>
 
 <figure class="mmd-figure">
     <pre class="mmd">
@@ -929,29 +1113,29 @@
         O --> |"/explore"| F
         F --> |"/exploration_done"| O
     </pre>
-    <figcaption class="mmd-caption">Fig 18: <code>exploration_orchestrator</code> at work.</figcaption>
+    <figcaption class="mmd-caption">Fig 24: <code>exploration_orchestrator</code> at work.</figcaption>
 </figure>
 
 <h2>Results</h2>
 
 <h3>Indoor exploration</h3>
 
-<p> Figure 19 shows the results of indoor exploration by the robot. The environment is a bit cluttered with some low-lying (below-the-lidar) items. The robot cautiously discovers all reachable areas.</p>
+<p> Figure 25 shows the results of indoor exploration by the robot. The environment is a bit cluttered with some low-lying (below-the-lidar) items. The robot cautiously discovers all reachable areas.</p>
 
 <figure class="figure">
     <div class="mp4-mini" data-src="explore_20250915_191609/rviz.mp4" data-speed="8" data-autoplay="true" data-blob="true"></div>
-    <figcaption class="mmd-caption">Fig 19: A movie of indoor exploration. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
+    <figcaption class="mmd-caption">Fig 25: A movie of indoor exploration. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 28).</figcaption>
 </figure>
 
 <p>While the exploration is for the most part successful, there are some interesting behaviors to be addressed in upcoming projects. First, the lidar-based odometry does seem noisy, with the robot jumping around a bit (say ~2cm magnitude). This may be the reason the robot sometimes moves very hesitantly when trying to skirt around obstacles. An upcoming odometry/sensor fusion project will look into this. Second, there are some strips between floor sections in this indoor environment of roughly 1cm in height. As the robot passes over these, the depth camera sees phantom obstacles - the robot vertical is not corrected for (the floor ahead seems "high" as the robot rocks forward off the strip). This is potentially addressable via the on-board (camera and robot) IMUs, although Nav2 did not decide to make this phantom obstacle permanent - it cleared almost immediately as the robot ran on the flat floor after crossing the strip. This sort of thing will really become important on natural outdoor terrain. Finally, the map is fairly well constructed, although loop closure is clearly a challenge for rtabmap in various areas - with multiple images of walls appearing. This indoor environment is roughly U-shaped, and the arms of the U are distorted. But the basic connectivity of the open space is preserved. </p>
 
 <h3>Exploration of the simulated scene</h3>
 
-<p> Figure 20 shows exploration of the simulated scene. The simulated scene is rectangular with cylindrical obstacles of various radii (see figure 6). </p>
+<p> Figure 26 shows exploration of the simulated scene. The simulated scene is rectangular with cylindrical obstacles of various radii (see figure 6). </p>
 
 <figure class="figure">
 <div class="mp4-mini" data-src="explore_20250916_142838/rviz.mp4" data-speed="8" data-autoplay="true" data-blob="true"></div>
-    <figcaption class="mmd-caption">Fig 20: A movie of exploration of the simulated scene. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
+    <figcaption class="mmd-caption">Fig 26: A movie of exploration of the simulated scene. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
 </figure>
 
 <p>This exploration shows that the robot can explore tight spaces and deal with obstacles only visible in the depth camera - it is quite adaptable with path replanning. Note that rtabmap has had significant issues with loop closure. For this combination of sensors and scene, it's possible a different SLAM algorithm would be better. The features in a simulated scene can be less rich - for this purpose I added the floor texture. But the primary problem for rtabmap may be the preponderance of flat floor in the depth map from the camera. </p>
@@ -959,15 +1143,15 @@
 <h3>Other interesting exploration products: real robot/indoors</h3>
 
 <p> On completion of mapping, the orchestrator collects a number of 2D and 3D mapping products.
-octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20). </p>
+octomap_grid (figure 27) is the 2d projection of the occupied space (figure 28). </p>
 
 <figure class="figure">
 <img src="explore_20250915_191609/octomap_grid.png"
      alt="octomap_grid" width="500">
-    <figcaption class="mmd-caption">Fig 21: Final mapping product: 2D.</figcaption>
+    <figcaption class="mmd-caption">Fig 27: Final mapping product: 2D.</figcaption>
 </figure>
 
-<p>Figure 22 is the final point cloud collected over the course of robot exploration. If you look carefully, there is some imaged clutter and imaging of the lower extremities of things. Figure 22 can be manipulated extensively via pan and zoom. Note there are several clusters of points at negative Z. Presumably the depth camera is still generating artifacts.</p>
+<p>Figure 28 is the final point cloud collected over the course of robot exploration. If you look carefully, there is some imaged clutter and imaging of the lower extremities of things. Figure 28 can be manipulated extensively via pan and zoom. Note there are several clusters of points at negative Z. Presumably the depth camera is still generating artifacts.</p>
 
 <figure class="figure">
   <div class="pcd-card">
@@ -980,7 +1164,7 @@ octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20).
          data-bg="#0b0e12">
     </div>
   </div>
-    <figcaption class="mmd-caption">Fig 22: Final mapping product: 3D.</figcaption>
+    <figcaption class="mmd-caption">Fig 28: Final mapping product: 3D.</figcaption>
 </figure>
 
 <h3>Other interesting exploration products: simulated robot/scene</h3>
@@ -988,10 +1172,10 @@ octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20).
 <figure class="figure">
 <img src="explore_20250916_142838/map.png"
      alt="map" width="500">
-    <figcaption class="mmd-caption">Fig 23: Final mapping product: 2D.</figcaption>
+    <figcaption class="mmd-caption">Fig 29: Final mapping product: 2D.</figcaption>
 </figure>
 
-<h1>Big picture Lessons learned</h1>
+<h2>Big picture Lessons learned</h2>
 
 <ul>
     <li>Depth cameras can generate bad point clouds when viewing "shiny" floor at a low angle. For this project, many phantom obstacles were detected (indoors). While one can mitigate this issue to a large degree by tilting the camera down (30 degrees in my case), this has other effects. For example, rtabmap complains that it's ICP step is having issues with point clouds in open floor areas - robot turns can be poorly tracked by rtabmap. If the camera were pointing forward, it might have a rich(er) 3D environment in view.  </li>
@@ -1007,18 +1191,23 @@ octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20).
     <li>Every SW or HW component is a learning experience of possibly great depth - especially when it is not working!</li>
     <li>Many things in ROS2 fail silently, especially in the vicinity of parameter settings. Some dev process needs to be brought to bear here.</li>
     <li>QoS settings for ROS2 topics are still a bit mysterious to me. I think this may be to blame for some behavior quirks, like missing output after exploration in simulation.</li>
+    <li>Calibrate all sensors for their position on the robot.</li>
     <li>The ROS2 Nav2 stack on my robot turned out to be quite safe - perhaps overly safe. I have not damaged any parts (yet).</li>
     <li>Your favorite GPT(s) can accelerate code development, but it is a chore to iterate on development and debugging with them. During code development, GTP4 and GPT5(better!) could be rather frustrating when coding to APIs - which is most of the time (I do NOT want to re-write any code if possible!). But, we still have to get used to each other! </li>
 </ul>
 
-<h1>Next steps</h1>
+<h2>Next steps</h2>
 <ul>
     <li>A 3d lidar! (e.g. VLP16).</li>
-    <li>Plumb the depths of odometry for this robot.</li>
+    <li>Plumb the depths of odometry by sensor fusion for this robot.</li>
     <li>Define metrics for exploration performance.</li>
     <li>Explore more scenes.</li>
     <li>Go outside.</li>
 </ul>
+
+</main>
+
+
 
 <!-- Lightbox viewer -->
 <div id="svgLightbox" aria-modal="true" role="dialog">
@@ -1032,6 +1221,88 @@ octomap_grid (figure 21) is the 2d projection of the occupied space (figure 20).
     <div id="svgStage" aria-live="polite"></div>
     <div id="svgStatus">Ready</div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+
+  // Ensure TOC can receive focus when returning via Back
+  if (!toc.hasAttribute('tabindex')) toc.setAttribute('tabindex', '-1');
+
+  // Use <main> if present; otherwise scan the whole body
+  const scope = document.querySelector('main') || document.body;
+  const headings = Array.from(scope.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+  if (!headings.length) { toc.textContent = '(no headings found)'; return; }
+
+  // Ensure unique IDs on headings
+  const slug = s => s.toLowerCase().trim().replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-') || 'section';
+  const seen = new Set();
+  for (const h of headings) {
+    if (!h.id) h.id = slug(h.textContent);
+    const base = h.id; let i = 1;
+    while (seen.has(h.id)) h.id = `${base}-${i++}`;
+    seen.add(h.id);
+  }
+
+  // Build nested list by heading level (no stray first bullet)
+  const root = document.createElement('ul');
+  let currentLevel = parseInt(headings[0].tagName.slice(1), 10);
+  const stack = [{ level: currentLevel - 1, ul: root }];
+
+  const pushList = level => {
+    const ul = document.createElement('ul');
+    const parentUL = stack[stack.length - 1].ul;
+    const lastLI = parentUL.lastElementChild;
+    (lastLI || parentUL).appendChild(ul);
+    stack.push({ level, ul });
+  };
+  const popList = () => { stack.pop(); };
+
+  for (const h of headings) {
+    const level = parseInt(h.tagName.slice(1), 10);
+    while (level > stack[stack.length - 1].level + 1) pushList(stack[stack.length - 1].level + 1);
+    while (level < stack[stack.length - 1].level) popList();
+    if (level > stack[stack.length - 1].level) pushList(level);
+
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = `#${h.id}`;
+    a.textContent = h.textContent.trim();
+    a.className = `lvl-${level}`;
+    li.appendChild(a);
+    stack[stack.length - 1].ul.appendChild(li);
+  }
+
+  toc.textContent = '';
+  toc.appendChild(root);
+
+  // Instant jump + Back goes to TOC first
+  toc.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+
+    const id = a.getAttribute('href').slice(1);
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    if (location.hash !== '#toc') history.pushState({ at: 'toc' }, '', '#toc'); // waypoint
+    history.pushState({ at: 'section', id }, '', '#' + id);
+
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    target.focus({ preventScroll: true });
+  });
+
+  window.addEventListener('popstate', () => {
+    if (location.hash === '#toc') {
+      toc.scrollIntoView({ behavior: 'auto', block: 'start' });
+      toc.focus({ preventScroll: true });
+    }
+  });
+});
+</script>
 
 <script>
     (function () {
