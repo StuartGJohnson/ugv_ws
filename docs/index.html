@@ -814,7 +814,7 @@
 
 <h2>Depth camera calibration</h2>
 
-<p>The Intel Realsense camera is not quite viewing the world from the perspective one might expect. In particular, when running in the mode used in this project, the resulting depth cloud is not centered on the camera housing - it is more or less centered on the left camera aperture. In any case, the way to not think about this is to develop a calibration procedure for the static transform tree of the depth camera sensor. Also, since my connection of robot components is somewhat un-square, it is best to assume it is at least somewhat wompy-jawed.</p>
+<p>The Intel Realsense camera is not quite viewing the world from the perspective one might expect. In particular, when running in the mode used in this project, the resulting depth cloud is not centered on the camera housing - it is more or less centered on the left camera aperture. One way to deal with this is to develop a calibration procedure for the static transform tree of the depth camera sensor.</p>
 
 <h3>Exteroceptive sensor transform tree</h3>
 <p>The real and simulated robots <i>almost</i> share an xacro file - that is, the file which defines the component physical relationships and properties. The difference between the two files are the transform settings of a <i>calibration</i> joint for the depth camera. This calibration is defined in both files. The simulated robot has a unit calibration transformation, whereas the real robot does not. The goal of calibration is to find the calibration transform. In this section, we only discuss the depth camera calibration. Also, we assume that the intrinsic and extrinsic calibration(s) of the depth camera have already been done - there are tools for this in the intel SW.</p>
@@ -913,7 +913,7 @@ xyz/rpy: [-0.00087293  0.00217825  0.00588482] [-0.01896374  0.01090149  0.00443
     </li>
 </ul>
 
-<p>The results of this process are shown in the following 3 figures.</p>
+<p>The above calibration process also works if I offset the camera housing (to the left, for example) in the shared part of the robot and simulated xacro file. As well, the process will also work if I do not offset the real camera to the left of center (as I have done - see figure 19). I have decided to offset the real camera so that it produces a more left-right symmetrical depth FOV - however, it still provides more depth points on the left (see figure 18). The results of the calibration process are shown in the following 4 figures.</p>
 
 <figure class="mmd-figure">
 <img src="real_robot_calibration_snapshot.jpg"
