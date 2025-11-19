@@ -62,7 +62,7 @@ def generate_launch_description():
           'Grid/MaxGroundAngle': '10',  # All ground tilted more than 10 degrees is an obstacle
           'Grid/MaxObstacleHeight':'0.5',  # All points over 0.5 meter are ignored
           'Grid/MinPlaneMinInliers': '100',
-          'Grid/RangeMin':'0.010', # ignore laser scan points on the robot itself
+          'Grid/RangeMin':'0.10', # ignore laser scan points on the robot itself
           'Grid/CellSize':'.02',
           'Grid/Voxel': '.02',
           'Optimizer/GravitySigma':'0' # Disable imu constraints (we are already in 2D)
@@ -146,7 +146,7 @@ def generate_launch_description():
             os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
         ),
         launch_arguments={
-            'params_file': 'nav2_rtabmap_params.yaml',
+            'params_file': 'nav2_rtabmap_gt_params.yaml',
         }.items(),
     )
 
