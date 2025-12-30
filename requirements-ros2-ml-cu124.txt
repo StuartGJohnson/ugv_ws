@@ -1,0 +1,18 @@
+# Pull PyTorch CUDA 12.4 wheels from the PyTorch index
+--index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://pypi.org/simple
+
+torch
+
+# Core scientific + plotting
+numpy==1.24.3
+scipy
+matplotlib
+tqdm
+
+# Optimization stack
+cvxpy==1.7.3
+ecos
+osqp
+scs
+
