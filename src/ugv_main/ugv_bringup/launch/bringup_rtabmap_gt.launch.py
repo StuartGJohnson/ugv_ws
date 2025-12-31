@@ -163,11 +163,11 @@ def generate_launch_description():
 
     # Include laser odometry launch file
     # TODO: move the launch file to a ros2 package, so the launch works from anywhere
-    # rf2o_laser_odometry_launch = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         'rf2o_laser_odometry.launch.py'
-    #     )
-    # )
+    rf2o_laser_odometry_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            'rf2o_laser_odometry_gt.launch.py'
+        )
+    )
 
     bringup_node = Node(
         package='ugv_bringup',
@@ -256,7 +256,7 @@ def generate_launch_description():
         robot_state_launch,
         realsense_launch,
         laser_bringup_launch,
-        #rf2o_laser_odometry_launch,
+        rf2o_laser_odometry_launch,
         nav2_launch,
         pointcloud_node,
         camera_sync,

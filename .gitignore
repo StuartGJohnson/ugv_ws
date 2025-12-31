@@ -6,4 +6,7 @@ maps/
 explore_*/
 rosbag*/
 bags/
+.idea/
+__pycache__/
+.vscode
 
