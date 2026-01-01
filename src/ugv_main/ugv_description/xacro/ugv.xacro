@@ -259,7 +259,7 @@
 
     <!-- camera calibration joint -->
     <joint name="d435_calibration_joint" type="fixed">
-	    <origin xyz="-0.00087293  0.00217825  0.00588482" rpy="-0.01896374  0.01090149  0.00443497"/>
+	    <origin xyz="0.00185596  0.00479639 -0.00043884" rpy="0.00352776  0.01112985 -0.00777017"/>
         <parent link="camera_pre_link"/>
         <child link="camera_link"/>
     </joint>
