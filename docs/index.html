@@ -565,7 +565,7 @@
      flowchart LR
         subgraph FW["UGV02 ESP32 firmware"]
             direction BT
-            D["IMU"] --> E["JSON polling\nencode"]
+            D["IMU"] --> E["JSON polling\nencode\n(20Hz)"]
             F["L wheel\nencoder"] --> E
             G["R wheel\nencoder"] --> E
             H["voltage"] --> E
@@ -580,7 +580,7 @@
         end
         E --> |usb| OB
     </pre>
-    <figcaption class="mmd-caption">Fig 5: wheel (speed) control</figcaption>
+    <figcaption class="mmd-caption">Fig 5: robot sensor feedback</figcaption>
 </figure>
 
 <h2>Software packaging: Linux</h2>
