@@ -1,5 +1,5 @@
-// This version generates a partial (twist only) odometry topic to
-// assess the impact of NOT discretizing the wheel encoders to cm.
+// This (original) version uses the strongly discretized odl/odr data to compute
+// odom_enc .These wheel encoder values are truncated to cm resolution.
 #include <geometry_msgs/msg/transform_stamped.hpp>
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/odometry.hpp"
@@ -29,7 +29,6 @@ float odom_yaw = 0.0;
 float yaw = 0.0;
 
 float wheel_separation = 0.174;
-float wheel_radius = 0.040;
 float understeer_factor = 2.0;
 
 // Macro to calculate the number of elements in an array
@@ -111,7 +110,6 @@ public:
         // Publisher for odometry messages
         odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom_enc", 5);
 
-
         // Timer to publish odometry data periodically
         timer_ = this->create_wall_timer(100ms, std::bind(&OdomPublisher::publish_odom, this));
     }
@@ -134,39 +132,80 @@ private:
     // Callback to handle raw odometry data and update position/velocity
     void handle_odom(const std::shared_ptr<std_msgs::msg::Float32MultiArray> msg)
     {
-        last_time_ = rclcpp::Clock().now();
+        rclcpp::Time curren_time = rclcpp::Clock().now();
 
         float now_odl = msg->data.at(0);  // Left wheel odometry
         float now_odr = msg->data.at(1);  // Right wheel odometry
 
+        // Initialize encoders if it's the first callback
+        if (!is_initialized)
+        {
+            init_odl = now_odl;
+            init_odr = now_odr;
+            is_initialized = true;
+        }
+
+        // Adjust odometry readings by subtracting the initial values
+        now_odl -= init_odl;
+        now_odr -= init_odr;
+
+        // Calculate time delta
+        dt = (curren_time - last_time_).seconds();
+        last_time_ = curren_time;
+
         // Compute distance traveled by each wheel
-        float dleft = now_odl * wheel_radius;
-        float dright = now_odr * wheel_radius;
+        float dleft = now_odl - pre_odl;
+        float dright = now_odr - pre_odr;
 
-        // vx and vw
-        vx = (dright + dleft) / 2.0;
-        vw = (dright - dleft) / (wheel_separation * understeer_factor);
+        // Update previous encoder readings
+        pre_odl = now_odl;
+        pre_odr = now_odr;
 
+        // Calculate average distance and change in heading
+        float dxy_ave = (dright + dleft) / 2.0;
+        float dth = (dright - dleft) / (wheel_separation * understeer_factor);
+
+        // Compute linear and angular velocities
+        vx = dxy_ave / dt;
+        vw = dth / dt;
+
+        // Update position if robot has moved
+        if (dxy_ave != 0)
+        {
+            float dx = cos(dth / 2) * dxy_ave;
+            float dy = sin(dth / 2) * dxy_ave;
+            x_pos_ += (cos(yaw) * dx - sin(yaw) * dy);
+            y_pos_ += (sin(yaw) * dx + cos(yaw) * dy);
+        }
+
+        // Update heading if the robot has rotated
+        if (dth != 0)
+        {
+            odom_yaw += dth;
+        }
+
+        // do NOT use imu. handy if testing the robot in safe mode.
+        // yaw = imu_yaw != 0 ? imu_yaw : odom_yaw;
+        yaw = odom_yaw;
     }
 
-    // Function to publish odometry data and broadcast transformation.
-    // this version only updates twist - I do not have raw odometry yet from
-    // the robot.
+    // Function to publish odometry data and broadcast transformation
     void publish_odom()
     {
         auto odom = nav_msgs::msg::Odometry();
         auto trans = geometry_msgs::msg::TransformStamped();
 
+
         // pull from (integrated) odom
         tf2::Quaternion q;
-        q.setRPY(0, 0, 0); // Roll, Pitch, Yaw
+        q.setRPY(0, 0, yaw); // Roll, Pitch, Yaw
         q1 = q.x();
         q2 = q.y();
         q3 = q.z();
         q0 = q.w();
 
         // Set the header information
-        odom.header.stamp = last_time_;
+        odom.header.stamp = rclcpp::Clock().now();
         odom.header.frame_id = odom_frame;
         odom.child_frame_id = base_footprint_frame;
 
@@ -197,6 +236,24 @@ private:
         // Publish the odometry message
         odom_publisher_->publish(odom);
 
+        // If enabled, broadcast the transformation
+        if (pub_odom_tf_)
+        {
+            trans.header.stamp = rclcpp::Clock().now();
+            trans.header.frame_id = odom_frame;
+            trans.child_frame_id = base_footprint_frame;
+
+            // Set translation and rotation for the transform
+            trans.transform.translation.x = x_pos_;
+            trans.transform.translation.y = y_pos_;
+            trans.transform.rotation.x = q1;
+            trans.transform.rotation.y = q2;
+            trans.transform.rotation.z = q3;
+            trans.transform.rotation.w = q0;
+
+            // Broadcast the transformation
+            tf_broadcaster_->sendTransform(trans);
+        }
     }
 };
 

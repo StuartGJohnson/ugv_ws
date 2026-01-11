@@ -149,11 +149,10 @@ class ugv_bringup(Node):
               
         self.imu_mag_publisher_.publish(msg)  # Publish the magnetic field data
 
-    # Publish heavily quantized encoder data to the ROS topic "odom/odom_raw"
+    # Publish odometry data to the ROS topic "odom/odom_raw"
     def publish_odom_raw(self):
         odom_raw_data = self.base_controller.base_data
-        # this is radians/sec
-        array = [odom_raw_data["L"], odom_raw_data["R"]]
+        array = [odom_raw_data["odl"] / 100, odom_raw_data["odr"] / 100]
         msg = Float32MultiArray(data=array)
         self.odom_publisher_.publish(msg)  # Publish the odometry data
 
