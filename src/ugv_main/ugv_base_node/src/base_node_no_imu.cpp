@@ -111,7 +111,6 @@ public:
         // Publisher for odometry messages
         odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom_enc", 5);
 
-
         // Timer to publish odometry data periodically
         timer_ = this->create_wall_timer(100ms, std::bind(&OdomPublisher::publish_odom, this));
     }
@@ -134,7 +133,16 @@ private:
     // Callback to handle raw odometry data and update position/velocity
     void handle_odom(const std::shared_ptr<std_msgs::msg::Float32MultiArray> msg)
     {
-        last_time_ = rclcpp::Clock().now();
+        if (!is_initialized) {
+            last_time_ = rclcpp::Clock().now();
+            is_initialized = true;
+            return;
+        }
+
+        rclcpp::Time current_time = rclcpp::Clock().now();
+        // Calculate time delta
+        dt = (current_time - last_time_).seconds();
+        last_time_ = current_time;
 
         float now_odl = msg->data.at(0);  // Left wheel odometry
         float now_odr = msg->data.at(1);  // Right wheel odometry
@@ -147,6 +155,32 @@ private:
         vx = (dright + dleft) / 2.0;
         vw = (dright - dleft) / (wheel_separation * understeer_factor);
 
+        float dth = vw * dt;
+        float dxy_ave = vx * dt;
+
+        // constant velocity during interval, midpoint
+        // integration.
+        if (dxy_ave != 0)
+        {
+            float a = dth / 2;
+            float s = 1.0f;
+            if (abs(a) > 1.e-6f) s = sin(a) / a;
+            float dx = s * cos(a) * dxy_ave;
+            float dy = s * sin(a) * dxy_ave;
+            x_pos_ += (cos(yaw) * dx - sin(yaw) * dy);
+            y_pos_ += (sin(yaw) * dx + cos(yaw) * dy);
+        }
+
+        // Update heading if the robot has rotated
+        if (dth != 0)
+        {
+            odom_yaw += dth;
+        }
+
+        // do NOT use imu. handy if testing the robot in safe mode.
+        // yaw = imu_yaw != 0 ? imu_yaw : odom_yaw;
+        yaw = odom_yaw;
+
     }
 
     // Function to publish odometry data and broadcast transformation.
@@ -154,12 +188,13 @@ private:
     // the robot.
     void publish_odom()
     {
+
         auto odom = nav_msgs::msg::Odometry();
         auto trans = geometry_msgs::msg::TransformStamped();
 
         // pull from (integrated) odom
         tf2::Quaternion q;
-        q.setRPY(0, 0, 0); // Roll, Pitch, Yaw
+        q.setRPY(0, 0, yaw); // Roll, Pitch, Yaw
         q1 = q.x();
         q2 = q.y();
         q3 = q.z();
