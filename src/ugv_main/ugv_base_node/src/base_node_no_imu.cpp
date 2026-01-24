@@ -87,6 +87,7 @@ class OdomPublisher : public rclcpp::Node
     std::string base_footprint_frame = "base_footprint";
     float init_odl = 0.0; // Initial value for left wheel encoder
     float init_odr = 0.0; // Initial value for right wheel encoder
+    float enc_to_rad_s = 2 * 3.14159265358979323846 / 660.0;
 
 public:
     OdomPublisher()
@@ -144,12 +145,11 @@ private:
         dt = (current_time - last_time_).seconds();
         last_time_ = current_time;
 
-        float now_odl = msg->data.at(0);  // Left wheel odometry
-        float now_odr = msg->data.at(1);  // Right wheel odometry
+        float now_odl = msg->data.at(0);  // Left wheel odometry; m/s
+        float now_odr = msg->data.at(1);  // Right wheel odometry; m/s
 
-        // Compute distance traveled by each wheel
-        float dleft = now_odl * wheel_radius;
-        float dright = now_odr * wheel_radius;
+        float dleft = now_odl;
+        float dright = now_odr;
 
         // vx and vw
         vx = (dright + dleft) / 2.0;

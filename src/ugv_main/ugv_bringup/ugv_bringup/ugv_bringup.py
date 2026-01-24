@@ -152,7 +152,8 @@ class ugv_bringup(Node):
     # Publish heavily quantized encoder data to the ROS topic "odom/odom_raw"
     def publish_odom_raw(self):
         odom_raw_data = self.base_controller.base_data
-        # this is radians/sec
+        # we have two choices
+        # this is meters/sec at each wheel
         array = [odom_raw_data["L"], odom_raw_data["R"]]
         msg = Float32MultiArray(data=array)
         self.odom_publisher_.publish(msg)  # Publish the odometry data
