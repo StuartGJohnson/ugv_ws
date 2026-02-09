@@ -44,6 +44,9 @@ class ReadLine:
 # Base controller class for managing UART communication and processing commands
 class BaseController:
     def __init__(self, ser: serial.Serial):
+        self.msg_count = 0
+        self.bad_msg_count = 0
+        self.last_bad_msg = 0
         self.logger = logging.getLogger('BaseController')  # Logger setup
         self.ser = ser
         self.rl = ReadLine(self.ser)  # Initialize ReadLine helper
@@ -57,14 +60,19 @@ class BaseController:
     # Function to read and return feedback data from the serial input
     def feedback_data(self):
         try:
+            self.msg_count += 1
             line = self.rl.readline().decode('utf-8')  # Read line from UART
             self.data_buffer = json.loads(line)  # Parse JSON data
             self.base_data = self.data_buffer  # Store received data
             return self.base_data  # Return base data
         except json.JSONDecodeError as e:
+            self.bad_msg_count += 1
+            self.last_bad_msg = self.msg_count
             self.logger.error(f"JSON decode error: {e} with line: {line}")  # Log error
             self.rl.clear_buffer()  # Clear buffer on error
         except Exception as e:
+            self.bad_msg_count += 1
+            self.last_bad_msg = self.msg_count
             self.logger.error(f"[base_ctrl.feedback_data] unexpected error: {e}")
             self.rl.clear_buffer()
 
