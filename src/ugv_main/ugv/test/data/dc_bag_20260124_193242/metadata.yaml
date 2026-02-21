@@ -1,0 +1,80 @@
+rosbag2_bagfile_information:
+  version: 5
+  storage_identifier: mcap
+  duration:
+    nanoseconds: 20984655900
+  starting_time:
+    nanoseconds_since_epoch: 1769311963416563581
+  message_count: 4900
+  topics_with_message_count:
+    - topic_metadata:
+        name: /tf
+        type: tf2_msgs/msg/TFMessage
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 1491
+    - topic_metadata:
+        name: /imu/mag
+        type: sensor_msgs/msg/MagneticField
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 561
+    - topic_metadata:
+        name: /odom_rf2o
+        type: nav_msgs/msg/Odometry
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 195
+    - topic_metadata:
+        name: /odom_enc
+        type: nav_msgs/msg/Odometry
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 197
+    - topic_metadata:
+        name: /odom/odom_raw
+        type: std_msgs/msg/Float32MultiArray
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 561
+    - topic_metadata:
+        name: /odom
+        type: nav_msgs/msg/Odometry
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 488
+    - topic_metadata:
+        name: /imu/data_raw
+        type: sensor_msgs/msg/Imu
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 560
+    - topic_metadata:
+        name: /cmd_vel
+        type: geometry_msgs/msg/Twist
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 358
+    - topic_metadata:
+        name: /object_1
+        type: geometry_msgs/msg/PoseStamped
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 488
+    - topic_metadata:
+        name: /tf_static
+        type: tf2_msgs/msg/TFMessage
+        serialization_format: cdr
+        offered_qos_profiles: ""
+      message_count: 1
+  compression_format: ""
+  compression_mode: ""
+  relative_file_paths:
+    - dc_bag_20260124_193242_0.mcap
+  files:
+    - path: dc_bag_20260124_193242_0.mcap
+      starting_time:
+        nanoseconds_since_epoch: 1769311963416563581
+      duration:
+        nanoseconds: 20984655900
+      message_count: 4900

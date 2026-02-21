@@ -49,7 +49,7 @@ UgvBringup::~UgvBringup() {
 void UgvBringup::feedback_loop() {
     nlohmann::json data;
     // Get the latest message from the queue, discarding older ones.
-    if (base_controller_.get_latest_message_from_queue(data)) {
+    if (base_controller_.get_message_from_queue(data)) {
         if (data.contains("T") && data["T"] == 1001) {
             publish_imu_data(data);
             publish_mag_data(data);

@@ -15,7 +15,7 @@ public:
 
     void start();
     void stop();
-    bool get_latest_message_from_queue(nlohmann::json& data);
+    bool get_message_from_queue(nlohmann::json& data);
 
 private:
     void read_thread_func();

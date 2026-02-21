@@ -37,19 +37,15 @@ void BaseController::read_thread_func() {
     }
 }
 
-bool BaseController::get_latest_message_from_queue(nlohmann::json& data) {
+bool BaseController::get_message_from_queue(nlohmann::json& data) {
     std::lock_guard<std::mutex> lock(queue_mutex_);
     if (message_queue_.empty()) {
         return false;
     }
 
-    // Discard all but the latest message
-    while (message_queue_.size() > 1) {
-        message_queue_.pop();
-    }
-
+    // Retrieve the oldest message (FIFO)
     data = message_queue_.front();
     message_queue_.pop();
-    // Debug: std::cerr << "[BaseController DEBUG] Pulled latest message from queue. Queue size: " << message_queue_.size() << std::endl;
+    // Debug: std::cerr << "[BaseController DEBUG] Pulled message from queue. Queue size: " << message_queue_.size() << std::endl;
     return true;
 }
