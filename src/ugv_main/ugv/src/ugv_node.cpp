@@ -62,8 +62,8 @@ Ugv::Ugv()
         "cmd_vel", 10, std::bind(&Ugv::cmd_vel_callback, this, std::placeholders::_1), write_sub_opt);
     led_ctrl_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>( 
         "ugv/led_ctrl", 10, std::bind(&Ugv::led_ctrl_callback, this, std::placeholders::_1), write_sub_opt);
-    voltage_sub_ = create_subscription<std_msgs::msg::Float32>(
-        "voltage", 10, std::bind(&Ugv::voltage_callback, this, std::placeholders::_1), write_sub_opt);
+//    voltage_sub_ = create_subscription<std_msgs::msg::Float32>(
+//        "voltage", 10, std::bind(&Ugv::voltage_callback, this, std::placeholders::_1), write_sub_opt);
 
 
     // --- Find and Open Serial Port ---
@@ -78,6 +78,8 @@ Ugv::Ugv()
         return; // Node cannot operate without serial port
     }
     robot_tools_.setup_robot();
+
+    clock_sync();
 
     // Start the dedicated reading thread in BaseController
     base_controller_.start();
@@ -94,8 +96,8 @@ Ugv::Ugv()
 
     // Clock sync timer (slow) assigned to write_cb_group_
     clock_sync_timer_ = create_wall_timer(
-        std::chrono::seconds(1), // Every 1 second
-        std::bind(&Ugv::clock_sync_loop, this),
+        std::chrono::seconds(60), // Every 1 minute
+        std::bind(&Ugv::clock_sync, this),
         write_cb_group_);
 }
 
@@ -109,6 +111,7 @@ void Ugv::feedback_loop() {
     nlohmann::json data;
     if (base_controller_.get_message_from_queue(data)) {
         if (data.contains("T") && data["T"] == 1001) {
+            set_timestamp(data);
             publish_odom(data);
             publish_imu_data(data);
             publish_mag_data(data);
@@ -123,7 +126,7 @@ void Ugv::feedback_loop() {
 void Ugv::publish_imu_data(const nlohmann::json &data)
 {
   auto msg = std::make_unique<sensor_msgs::msg::Imu>();
-  msg->header.stamp = get_clock()->now();
+  msg->header.stamp = robot_timestamp_;
   msg->header.frame_id = "base_imu_link";
 
   msg->linear_acceleration.x = 9.8 * data["ax"].get<float>() / 8192.0;
@@ -140,7 +143,7 @@ void Ugv::publish_imu_data(const nlohmann::json &data)
 void Ugv::publish_mag_data(const nlohmann::json &data)
 {
   auto msg = std::make_unique<sensor_msgs::msg::MagneticField>();
-  msg->header.stamp = get_clock()->now();
+  msg->header.stamp = robot_timestamp_;
   msg->header.frame_id = "base_imu_link";
 
   msg->magnetic_field.x = data["mx"].get<float>() * 0.15;
@@ -158,12 +161,19 @@ void Ugv::publish_odom_data(const nlohmann::json &data)
   odom_pub_->publish(std::move(msg));
 }
 
+void Ugv::set_timestamp(const nlohmann::json &data)
+{
+  double robot_stamp = data["tsec"].get<float>();
+  rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
+  robot_timestamp_  = last_clock_sync_sent_time_ + dtSec;
+}
+
 void Ugv::publish_odom(const nlohmann::json &data)
 {
   ekf1Data ekf_data;
   ekf_data.gz_rps = 3.1415926 * data["gz"].get<float>() / (16.4 * 180.0);
   ekf_data.v_lr_mps = Vector2d({data["L"].get<float>(), data["R"].get<float>()});
-  ekf_data.tSec = data["tsec"].get<float>();
+  ekf_data.tSec = robot_timestamp_.seconds();
 
   ekf1Out ekf_out = ekf1.Update(ekf_data);
 
@@ -171,9 +181,7 @@ void Ugv::publish_odom(const nlohmann::json &data)
 
   // extract the latest estimates and publish
   nav_msgs::msg::Odometry odom;
-  rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(ekf_data.tSec);
-  rclcpp::Time timestamp = last_clock_sync_sent_time_ + dtSec;
-  odom.header.stamp = timestamp;
+  odom.header.stamp = robot_timestamp_;
   odom.header.frame_id = odom_frame;
   odom.child_frame_id = base_footprint_frame;
 
@@ -215,7 +223,7 @@ void Ugv::publish_odom(const nlohmann::json &data)
   if (pub_odom_tf_)
   {
     geometry_msgs::msg::TransformStamped t;
-    t.header.stamp = timestamp;
+    t.header.stamp = robot_timestamp_;
     t.header.frame_id = odom_frame;
     t.child_frame_id = base_footprint_frame;
     t.transform.translation.x = x_pos;
@@ -237,14 +245,14 @@ void Ugv::publish_voltage_data(const nlohmann::json& data) {
 }
 
 // --- Clock Sync Loop ---
-void Ugv::clock_sync_loop() {
+void Ugv::clock_sync() {
     nlohmann::json clock_sync_cmd;
-    clock_sync_cmd["T"] = 42; // As requested: {"T":42}
+    clock_sync_cmd["T"] = 42;
     
     // Store ROS2 time *just before* sending the signal
     last_clock_sync_sent_time_ = this->get_clock()->now();
     robot_tools_.send_command(clock_sync_cmd);
-    RCLCPP_DEBUG(get_logger(), "Sent clock sync command. Stored time: %f", last_clock_sync_sent_time_.seconds());
+    // RCLCPP_DEBUG(get_logger(), "Sent clock sync command. Stored time: %f", last_clock_sync_sent_time_.seconds());
 }
 
 // --- cmd_vel Callback (from ugv_driver_estop) ---

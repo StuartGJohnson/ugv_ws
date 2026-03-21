@@ -161,7 +161,7 @@
     <xacro:box_link name="base_link" length="${body_length}" width="${body_width}" height="${body_height}" density="${body_density}" color="0.0 0.0 0.0 1.0"/>
     <xacro:box_link name="battery_link" length="${battery_length}" width="${battery_width}" height="${battery_height}" density="${battery_density}" color="0.25 0.25 0.25 1.0"/>
     <xacro:box_link name="orin_link" length="${orin_length}" width="${orin_width}" height="${orin_height}" density="${orin_density}" color="0.45 0.45 0.45 1.0"/>
-    <xacro:box_link name="lidar_link" length="${lidar_length}" width="${lidar_width}" height="${lidar_height}" density="${lidar_density}" color="0.0 0.0 0.0 1.0"/>
+    <xacro:box_link name="lidar_pre_link" length="${lidar_length}" width="${lidar_width}" height="${lidar_height}" density="${lidar_density}" color="0.0 0.0 0.0 1.0"/>
     <xacro:box_link name="camera_pre_link" length="${d435_length}" width="${d435_width}" height="${d435_height}" density="${d435_density}" color="0.7 0.7 0.7 1.0"/>
     <xacro:box_link name="gps_link" length="${gps_length}" width="${gps_width}" height="${gps_height}" density="${gps_density}" color="1.0 1.0 1.0 1.0"/>
 
@@ -180,6 +180,7 @@
 
     <link name="camera_optical_link"/>
     <link name="camera_link"/>
+    <link name="lidar_link"/>
 
     <!-- Joints -->
 
@@ -247,6 +248,13 @@
     <joint name="lidar_joint" type="fixed">
         <origin xyz="-.045 0 ${orin_lidar_offset}" rpy="0 0 0"/>
         <parent link="orin_link"/>
+        <child link="lidar_pre_link"/>
+    </joint>
+
+    <!-- lidar calibration joint -->
+    <joint name="lidar_calibration_joint" type="fixed">
+	    <origin xyz="0 0 0" rpy="0 0 0"/>
+        <parent link="lidar_pre_link"/>
         <child link="lidar_link"/>
     </joint>
 

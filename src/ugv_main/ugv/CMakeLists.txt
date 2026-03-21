@@ -43,6 +43,10 @@ install(TARGETS
 install(DIRECTORY include/
   DESTINATION include)
 
+install(DIRECTORY launch/
+    DESTINATION share/${PROJECT_NAME}
+)
+
 # why do I need an extra PROJECT_NAME here?
 install(DIRECTORY test/data/
   DESTINATION share/${PROJECT_NAME}/test/data)

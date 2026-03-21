@@ -377,6 +377,9 @@ TEST(EkfReplay, BagCase01)
   int ind_max = -1;
 
   ekf1Init ekf_init;
+  ekf_init.x = Vector3d({0, 0, 0});
+  ekf_init.v_lr_mps = Vector2d({0, 0});
+  ekf_init.t = 0;
   bool init_done = false;
 
   // first pass - collect ground truth odometry and t0
@@ -495,7 +498,18 @@ TEST(EkfTest, PlotSomething) {
   gp.plot_xy(traj.x, traj.y, "EKF x(t)", 0);
 }
 
-
+TEST(EkfTest, TestGPTcontention)
+{
+  // double check counter roll-over correction (on this computer)
+  std::uint32_t correction = std::uint32_t(std::pow(2,32)-1);
+  std::uint32_t x = correction - 22;
+  std::uint32_t y = 5;
+  std::uint32_t z = y+(correction-x+1);
+  std::uint32_t yx = y-x;
+  std::cerr << z << "\n";
+  std::cerr << yx << "\n";
+  std::cerr << x << "\n";
+}
 
 int main(int argc, char** argv) {
     testing::InitGoogleTest(&argc, argv);

@@ -72,11 +72,13 @@ bool RobotTools::is_open() const {
 }
 
 void RobotTools::setup_robot() {
+    // robot type = 0
     nlohmann::json cmd1;
     cmd1["T"] = "4";
     cmd1["cmd"] = 0;
     send_command(cmd1);
-
+    
+    // set streaming UART
     nlohmann::json cmd2;
     cmd2["T"] = "131";
     cmd2["cmd"] = 1;

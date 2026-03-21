@@ -30,6 +30,7 @@ public:
     ~Ugv();
 
 private:
+    void set_timestamp(const nlohmann::json& data);
     void publish_imu_data(const nlohmann::json& data);
     void publish_mag_data(const nlohmann::json& data);
     void publish_odom_data(const nlohmann::json& data);
@@ -37,7 +38,7 @@ private:
     void publish_odom(const nlohmann::json& data);
     // --- Callbacks ---
     void feedback_loop(); // Fast timer for reading sensor data
-    void clock_sync_loop(); // Slow timer for sending clock sync
+    void clock_sync(); // Slow timer for sending clock sync
     void cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg);
     void joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg);
     void led_ctrl_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg);
@@ -75,6 +76,7 @@ private:
     // --- Node State ---
     std::atomic<bool> estop_;
     rclcpp::Time last_clock_sync_sent_time_; // Stores ROS2 time when clock sync was sent
+    rclcpp::Time robot_timestamp_; // computed timestamp from robot update
 
     // --- Parameters ---
     std::string vendor_id_;
