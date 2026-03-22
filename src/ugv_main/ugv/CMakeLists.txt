@@ -22,7 +22,7 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(UDEV REQUIRED libudev)
 
 # UGV library
-add_library(ugv_lib src/ekf1.cpp src/robot_tools.cpp src/base_controller.cpp src/ugv_bringup_node.cpp src/ugv_driver_estop_node.cpp src/ugv_node.cpp)
+add_library(ugv_lib src/static_tf_to_dynamic_publisher.cpp src/ekf1.cpp src/robot_tools.cpp src/base_controller.cpp src/ugv_bringup_node.cpp src/ugv_driver_estop_node.cpp src/ugv_node.cpp)
 target_include_directories(ugv_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -35,9 +35,12 @@ add_executable(ugv src/ugv_main.cpp)
 ament_target_dependencies(ugv rclcpp) # rclcpp is the base dependency
 target_link_libraries(ugv ugv_lib)
 
+add_executable(static_tf_to_dynamic_publisher src/static_tf_to_dynamic_publisher.cpp)
+ament_target_dependencies(static_tf_to_dynamic_publisher rclcpp) # rclcpp is the base dependency
+target_link_libraries(static_tf_to_dynamic_publisher ugv_lib)
 
 install(TARGETS
-  ugv
+  ugv static_tf_to_dynamic_publisher
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/

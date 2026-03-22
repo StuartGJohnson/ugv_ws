@@ -26,7 +26,7 @@ def launch_setup(context, *args, **kwargs):
         executable='robot_state_publisher',
         #namespace='ugv',
         parameters=[
-            {'robot_description': robot_description, 'use_tf_static': False, 'use_sim_time': False}
+            {'robot_description': robot_description, 'use_sim_time': False}
             ],
     )
     

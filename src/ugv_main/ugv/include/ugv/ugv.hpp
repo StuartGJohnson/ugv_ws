@@ -77,6 +77,9 @@ private:
     std::atomic<bool> estop_;
     rclcpp::Time last_clock_sync_sent_time_; // Stores ROS2 time when clock sync was sent
     rclcpp::Time robot_timestamp_; // computed timestamp from robot update
+    rclcpp::Time last_timestamp_; // computed timestamp from robot update
+    bool last_timestamp_set_;
+    int iter_count;
 
     // --- Parameters ---
     std::string vendor_id_;

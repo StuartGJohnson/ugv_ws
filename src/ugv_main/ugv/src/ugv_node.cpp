@@ -17,8 +17,13 @@
 #include <cstdlib> // For std::system
 
 Ugv::Ugv()
-    : rclcpp::Node("ugv"), robot_tools_(), base_controller_(robot_tools_), ekf1(), estop_(false) {
-
+    : rclcpp::Node("ugv"),
+     robot_tools_(),
+      base_controller_(robot_tools_),
+      ekf1(),
+      estop_(false),
+      last_timestamp_set_(false),
+      iter_count(0){
     // --- Declare and Get Parameters ---
     this->declare_parameter("vendor_id", "1a86");
     this->declare_parameter("product_id", "55d3");
@@ -81,6 +86,9 @@ Ugv::Ugv()
 
     clock_sync();
 
+    // make sure the clock sync gets through
+    rclcpp::sleep_for(std::chrono::milliseconds(200));
+
     // Start the dedicated reading thread in BaseController
     base_controller_.start();
 
@@ -95,10 +103,10 @@ Ugv::Ugv()
         read_cb_group_);
 
     // Clock sync timer (slow) assigned to write_cb_group_
-    clock_sync_timer_ = create_wall_timer(
-        std::chrono::seconds(60), // Every 1 minute
-        std::bind(&Ugv::clock_sync, this),
-        write_cb_group_);
+//    clock_sync_timer_ = create_wall_timer(
+//        std::chrono::seconds(60), // Every 1 minute
+//        std::bind(&Ugv::clock_sync, this),
+//        write_cb_group_);
 }
 
 Ugv::~Ugv() {
@@ -109,14 +117,17 @@ Ugv::~Ugv() {
 // --- Feedback Loop (from ugv_bringup) ---
 void Ugv::feedback_loop() {
     nlohmann::json data;
+    bool loop_timeset_ready = last_timestamp_set_;
     if (base_controller_.get_message_from_queue(data)) {
         if (data.contains("T") && data["T"] == 1001) {
             set_timestamp(data);
-            publish_odom(data);
-            publish_imu_data(data);
-            publish_mag_data(data);
-            publish_odom_data(data);
-            publish_voltage_data(data);
+            if (loop_timeset_ready) {
+                publish_odom(data);
+                publish_imu_data(data);
+                publish_mag_data(data);
+                publish_odom_data(data);
+                publish_voltage_data(data);
+            }
         }
         // TODO: Handle clock sync response if robot sends it back.
         // If data contains clock sync response (e.g. {"T":42, "time_us":...}), compare with last_clock_sync_sent_time_
@@ -163,9 +174,28 @@ void Ugv::publish_odom_data(const nlohmann::json &data)
 
 void Ugv::set_timestamp(const nlohmann::json &data)
 {
-  double robot_stamp = data["tsec"].get<float>();
-  rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
-  robot_timestamp_  = last_clock_sync_sent_time_ + dtSec;
+  // experimenting
+  // double robot_stamp = data["tsec"].get<float>();
+  // rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
+  // rclcpp::Time robots_robot_timestamp_  = last_clock_sync_sent_time_ + dtSec + rclcpp::Duration::from_seconds(0.02);
+  // for now, we just use host-side timestamps (like the camera and lidar)
+  if (last_timestamp_set_) {
+    rclcpp::Time current_time = this->get_clock()->now();
+    robot_timestamp_ = last_timestamp_ + (current_time - last_timestamp_) * 0.5;
+    last_timestamp_ = current_time;
+    // rclcpp::Duration dt = robots_robot_timestamp_ - robot_timestamp_;
+    // double dt_sec = dt.seconds();
+    // if (iter_count == 100) {
+    //     RCLCPP_INFO(get_logger(), "robot vs orin time: %f", dt_sec);
+    //     iter_count = 0;
+    // }
+    // iter_count += 1;
+    //robot_timestamp_ = robots_robot_timestamp_;
+  }
+  else {
+    last_timestamp_ = this->get_clock()->now();
+    last_timestamp_set_ = true;
+  }
 }
 
 void Ugv::publish_odom(const nlohmann::json &data)

@@ -32,6 +32,19 @@ def generate_launch_description():
         )
     )
 
+    # /scan to /scan_cloud
+    scan_to_pc_node = Node(
+        package='point_cloud_tools',
+        executable='scan_to_point_cloud',
+        parameters=[
+            {'scan_topic': '/scan',
+             'output_topic': '/scan_cloud',
+             'min_range': 0.05,
+             'max_range': 0.6
+             }
+        ]
+    )
+
     # realsense launch
     realsense_launch = GroupAction(
         actions=[
@@ -49,7 +62,8 @@ def generate_launch_description():
                     'align_depth.enable': 'true',
                     'depth_module.depth_profile': '480x270x15',
                     'rgb_camera.color_profile': '424x240x15',
-                    'camera_namespace': '/'
+                    'camera_namespace': '/',
+                    'publish_tf': 'true'
                 }.items()
             )
         ],
@@ -100,10 +114,10 @@ def generate_launch_description():
     )
 
     # TODO: this is annoying, try to get rid of it
-    # dyn_tf = Node(
-    #     package='ugv_bringup',
-    #     executable='dynamic_tf_publisher',
-    # )
+    dyn_tf = Node(
+        package='ugv',
+        executable='static_tf_to_dynamic_publisher',
+    )
 
 
     return LaunchDescription([
@@ -118,7 +132,8 @@ def generate_launch_description():
         robot_state_launch,
         realsense_launch,
         laser_bringup_launch,
-        rf2o_node,
+        scan_to_pc_node,
+        #rf2o_node,
         pointcloud_node,
         camera_sync,
     ])
