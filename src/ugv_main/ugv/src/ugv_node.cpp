@@ -30,6 +30,7 @@ Ugv::Ugv()
     this->declare_parameter("low_battery_sound_path", "/home/ws/ugv_ws/src/ugv_main/ugv_bringup/ugv_bringup/low_battery.wav"); // Default path from Python
     this->declare_parameter("wheel_separation", 0.174);
     this->declare_parameter("understeer_factor", 2.0);
+    this->declare_parameter<std::string>("odom_topic", "odom");
     this->declare_parameter<std::string>("odom_frame", "odom");
     this->declare_parameter<std::string>("base_footprint_frame", "base_footprint");
     this->declare_parameter<bool>("pub_odom_tf", false);
@@ -40,6 +41,7 @@ Ugv::Ugv()
     wheel_separation_ = this->get_parameter("wheel_separation").as_double();
     understeer_factor_ = this->get_parameter("understeer_factor").as_double();
     this->get_parameter<bool>("pub_odom_tf", pub_odom_tf_);
+    this->get_parameter<std::string>("odom_topic", odom_topic);
     this->get_parameter<std::string>("odom_frame", odom_frame);
     this->get_parameter<std::string>("base_footprint_frame", base_footprint_frame);
 
@@ -53,7 +55,7 @@ Ugv::Ugv()
     imu_pub_ = create_publisher<sensor_msgs::msg::Imu>("imu/data_raw", 100);
     mag_pub_ = create_publisher<sensor_msgs::msg::MagneticField>("imu/mag", 100);
     odom_pub_ = create_publisher<std_msgs::msg::Float32MultiArray>("odom/odom_raw", 100);
-    odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 5);
+    odom_publisher_ = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 5);
     voltage_pub_ = create_publisher<std_msgs::msg::Float32>("voltage", 50);
 
     // --- Subscriptions ---

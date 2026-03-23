@@ -59,7 +59,6 @@ def generate_launch_description():
           ('rgb/camera_info', '/camera/color/camera_info'),
           ('depth/image', '/camera/aligned_depth_to_color/image_raw')]
 
-
     return LaunchDescription([
 
         # Launch arguments

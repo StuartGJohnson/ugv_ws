@@ -69,6 +69,7 @@ private:
 
     // odometry
     bool pub_odom_tf_ = false;
+    std::string odom_topic = "odom";
     std::string odom_frame = "odom";
     std::string base_footprint_frame = "base_footprint";
     Ekf1 ekf1;

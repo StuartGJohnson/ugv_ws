@@ -9,4 +9,8 @@ bags/
 .idea/
 __pycache__/
 .vscode
+frames*.pdf
+frames*.gv
+rosgraph*
+/trajectory_data_collector
 
