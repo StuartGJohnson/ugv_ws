@@ -239,11 +239,19 @@ void Ugv::publish_odom(const nlohmann::json &data)
   odom.twist.twist.angular.y = 0.0;
   odom.twist.twist.angular.z = ekf_out.twist[1];
 
-  Eigen::Matrix<double, 6, 6> odom_cov = Eigen::Matrix<double, 6, 6>::Zero();
-  odom_cov.block<3,3>(0, 0) = ekf_out.P.block<3,3>(0, 0);
+  Eigen::Matrix<double, 6, 6> odom_cov = Eigen::Matrix<double, 6, 6>::Identity() * 9999.0;
+  odom_cov(0,0) = ekf_out.P(0,0);
+  odom_cov(0,1) = ekf_out.P(0,1);
+  odom_cov(1,0) = ekf_out.P(1,0);
+  odom_cov(1,1) = ekf_out.P(1,1);
+  odom_cov(0,5) = ekf_out.P(0,2);
+  odom_cov(5,0) = ekf_out.P(2,0);
+  odom_cov(1,5) = ekf_out.P(1,2);
+  odom_cov(5,1) = ekf_out.P(2,1);
+  odom_cov(5,5) = ekf_out.P(2,2);
   eigen_to_ros_cov(odom_cov, odom.pose.covariance);
 
-  Eigen::Matrix<double, 6, 6> twist_cov = Eigen::Matrix<double, 6, 6>::Zero();
+  Eigen::Matrix<double, 6, 6> twist_cov =  Eigen::Matrix<double, 6, 6>::Identity() * 9999.0;
   twist_cov(0,0) = ekf_out.Pt(0,0);
   twist_cov(0,5) = ekf_out.Pt(0,1);
   twist_cov(5,0) = ekf_out.Pt(1,0);
