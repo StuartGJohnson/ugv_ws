@@ -105,7 +105,8 @@ def generate_launch_description():
                     'align_depth.enable': 'true',
                     'depth_module.depth_profile': '480x270x15',
                     'rgb_camera.color_profile': '424x240x15',
-                    'camera_namespace': '/'
+                    'camera_namespace': '/',
+                    'publish_tf': 'true'
                 }.items()
             )
         ],
@@ -150,39 +151,35 @@ def generate_launch_description():
         }.items(),
     )
 
-    # Include laser odometry launch file
-    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
-    rf2o_laser_odometry_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            'rf2o_laser_odometry.launch.py'
-        )
+    rf2o_node = Node(
+        package='rf2o_laser_odometry',
+        executable='rf2o_laser_odometry_node',
+        name='rf2o_laser_odometry',
+        output='screen',
+        parameters=[{
+            'laser_scan_topic' : '/scan',
+            'odom_topic' : '/odom_rf2o',
+            'publish_tf' : False,
+            'base_frame_id' : 'base_footprint',
+            'odom_frame_id' : 'odom',
+            'init_pose_from_topic' : '',
+            'freq' : 10.0}],
     )
 
-    bringup_node = Node(
-        package='ugv_bringup',
-        executable='ugv_bringup',
-    )
-
+    # should not need this
     dyn_tf = Node(
-        package='ugv_bringup',
-        executable='dynamic_tf_publisher',
+        package='ugv',
+        executable='static_tf_to_dynamic_publisher',
     )
 
-
-    driver_node = Node(
-        package='ugv_bringup',
-        executable='ugv_driver_estop',
+    # note that /odom is reserved for the ground truth odom, so
+    # we reconfigure for the ugv ekf /odom
+    ugv_node = Node(
+        package='ugv',
+        executable='ugv',
+        parameters=[{'pub_odom_tf': True, 'odom_topic': '/odom'}]
     )
 
-    # Define the base node with parameters
-    base_node = Node(
-        package='ugv_base_node',
-        executable='base_node_no_imu',
-        # TODO: when the base node has odom, might bring this back
-        # right now, laser odometry is doing this
-        # parameters=[{'pub_odom_tf': LaunchConfiguration('pub_odom_tf')}],
-        parameters=[{'pub_odom_tf': False}],
-    )
 
     # point cloud/scan fusion
     # fuser_node = Node(
@@ -236,15 +233,13 @@ def generate_launch_description():
 
         # robot base nodes
         pub_odom_tf_arg,
-        bringup_node,
-        driver_node,
         dyn_tf,
-        base_node,
+        ugv_node,
         #fuser_node,
         robot_state_launch,
         realsense_launch,
         laser_bringup_launch,
-        rf2o_laser_odometry_launch,
+        rf2o_node,
         nav2_launch,
         pointcloud_node,
         camera_sync,
