@@ -225,7 +225,7 @@ def generate_launch_description():
             description='Launch in localization mode.'),
 
         # robot base nodes
-        dyn_tf,
+        #dyn_tf,
         ugv_node,
         #fuser_node,
         robot_state_launch,
