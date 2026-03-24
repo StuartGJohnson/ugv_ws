@@ -28,13 +28,6 @@ def generate_launch_description():
 
     localization = LaunchConfiguration('localization')
 
-    # todo: on a real robot, we want this false - until
-    # we get around to fixing proprioceptive odometry
-    pub_odom_tf_arg = DeclareLaunchArgument(
-        'pub_odom_tf', default_value='false',
-        description='Whether to publish the tf from the original odom to the base_footprint',
-    )
-
     parameters={
           'frame_id':'base_footprint',
           'use_sim_time': False,
@@ -232,7 +225,6 @@ def generate_launch_description():
             description='Launch in localization mode.'),
 
         # robot base nodes
-        pub_odom_tf_arg,
         dyn_tf,
         ugv_node,
         #fuser_node,
