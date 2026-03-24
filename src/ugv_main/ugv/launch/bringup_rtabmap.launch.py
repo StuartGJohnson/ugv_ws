@@ -73,6 +73,14 @@ def generate_launch_description():
         )
     )
 
+    # lidar launch
+    # TODO: move the launch file to a ros2 package, so the launch works from anywhere
+    laser_bringup_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            'ld19.launch.py'
+        )
+    )
+
     # realsense launch
     realsense_launch = GroupAction(
         actions=[
@@ -222,6 +230,7 @@ def generate_launch_description():
         #fuser_node,
         robot_state_launch,
         realsense_launch,
+        laser_bringup_launch,
         rf2o_node,
         nav2_launch,
         pointcloud_node,
