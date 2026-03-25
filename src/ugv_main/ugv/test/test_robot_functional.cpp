@@ -129,7 +129,7 @@ TEST(RobotToolsFunctionalTest, SendPID) {
 
     nlohmann::json set_pid_cmd;
     set_pid_cmd["T"] = "2";
-    set_pid_cmd["P"] = 150.0;
+    set_pid_cmd["P"] = 250.0;
     set_pid_cmd["I"] = 1.0;
     set_pid_cmd["D"] = 5.0;
     set_pid_cmd["L"] = 0.0;
@@ -138,11 +138,11 @@ TEST(RobotToolsFunctionalTest, SendPID) {
     usleep(2000000); // Give the robot some time to respond
 
     zero_vel_cmd["T"] = "13";
-    zero_vel_cmd["X"] = 1.0;
+    zero_vel_cmd["X"] = 0.5;
     zero_vel_cmd["Z"] = 0.0;
     robot_tools.send_command(zero_vel_cmd);
     std::cout << "non-zero velocity command sent." << std::endl;
-    usleep(2000000); // Give the robot some time to respond
+    usleep(1000000); // how far did the robot move?
 
     zero_vel_cmd["T"] = "13";
     zero_vel_cmd["X"] = 0.0;

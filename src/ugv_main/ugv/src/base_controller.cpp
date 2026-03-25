@@ -20,6 +20,12 @@ void BaseController::stop() {
     }
 }
 
+void BaseController::flush() {
+    std::queue<nlohmann::json> empty;
+    std::lock_guard<std::mutex> lock(queue_mutex_);
+    std::swap(message_queue_, empty);
+}
+
 void BaseController::read_thread_func() {
     while (running_) {
         std::string line = robot_tools_.read_line(); // This now blocks until a line or timeout

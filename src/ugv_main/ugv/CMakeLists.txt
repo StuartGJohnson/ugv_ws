@@ -22,7 +22,16 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(UDEV REQUIRED libudev)
 
 # UGV library
-add_library(ugv_lib src/static_tf_to_dynamic_publisher.cpp src/ekf1.cpp src/robot_tools.cpp src/base_controller.cpp src/ugv_bringup_node.cpp src/ugv_driver_estop_node.cpp src/ugv_node.cpp)
+add_library(ugv_lib 
+  src/static_tf_to_dynamic_publisher.cpp 
+  src/ekf1.cpp 
+  src/robot_tools.cpp 
+  src/base_controller.cpp
+  src/ugv_bringup_node.cpp
+  src/ugv_driver_estop_node.cpp
+  src/ugv_node.cpp
+  src/ugv_collector.cpp)
+
 target_include_directories(ugv_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
@@ -68,6 +77,9 @@ if(BUILD_TESTING)
   
   add_executable(test_ekf test/test_ekf.cpp)
   target_link_libraries(test_ekf GTest::gtest ugv_lib)
+
+  add_executable(test_tune_pid test/test_tune_pid.cpp)
+  target_link_libraries(test_tune_pid GTest::gtest ugv_lib)
 
   add_test(
     NAME robot_tools_test

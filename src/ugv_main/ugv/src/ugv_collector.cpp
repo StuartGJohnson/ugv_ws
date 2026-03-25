@@ -1,4 +1,4 @@
-#include "ugv/ugv.hpp"
+#include "ugv/ugv_collector.hpp"
 
 // Other includes
 #include "rclcpp/rclcpp.hpp"
@@ -16,13 +16,20 @@
 #include <nlohmann/json.hpp>
 #include <cstdlib> // For std::system
 
-Ugv::Ugv()
-    : rclcpp::Node("ugv"),
-     robot_tools_(),
+#include "ugv/gnuplot.hpp"
+
+UgvCollector::UgvCollector(std::map<int, Command> commands)
+    : rclcpp::Node("ugv_collector"),
+      commands_(commands),
+      complete_(false),
+      last_cmd_left_(0.0),
+      last_cmd_right_(0.0),
+      robot_tools_(),
       base_controller_(robot_tools_),
       ekf1(),
       estop_(false),
-      last_timestamp_set_(false),
+      last_timestamp_set_(true),
+      command_step_(0),
       iter_count(0){
     // --- Declare and Get Parameters ---
     this->declare_parameter("vendor_id", "1a86");
@@ -64,13 +71,13 @@ Ugv::Ugv()
     write_sub_opt.callback_group = write_cb_group_;
 
     joy_sub_ = create_subscription<sensor_msgs::msg::Joy>(
-        "joy", 10, std::bind(&Ugv::joy_callback, this, std::placeholders::_1), write_sub_opt);
+        "joy", 10, std::bind(&UgvCollector::joy_callback, this, std::placeholders::_1), write_sub_opt);
     cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
-        "cmd_vel", 10, std::bind(&Ugv::cmd_vel_callback, this, std::placeholders::_1), write_sub_opt);
+        "cmd_vel", 10, std::bind(&UgvCollector::cmd_vel_callback, this, std::placeholders::_1), write_sub_opt);
     led_ctrl_sub_ = create_subscription<std_msgs::msg::Float32MultiArray>( 
-        "ugv/led_ctrl", 10, std::bind(&Ugv::led_ctrl_callback, this, std::placeholders::_1), write_sub_opt);
+        "ugv/led_ctrl", 10, std::bind(&UgvCollector::led_ctrl_callback, this, std::placeholders::_1), write_sub_opt);
 //    voltage_sub_ = create_subscription<std_msgs::msg::Float32>(
-//        "voltage", 10, std::bind(&Ugv::voltage_callback, this, std::placeholders::_1), write_sub_opt);
+//        "voltage", 10, std::bind(&UgvCollector::voltage_callback, this, std::placeholders::_1), write_sub_opt);
 
 
     // --- Find and Open Serial Port ---
@@ -92,7 +99,7 @@ Ugv::Ugv()
     clock_sync();
 
     // make sure the clock sync gets through
-    rclcpp::sleep_for(std::chrono::milliseconds(200));
+    rclcpp::sleep_for(std::chrono::milliseconds(100));
 
     // flush the msg queue
     base_controller_.flush();
@@ -104,23 +111,37 @@ Ugv::Ugv()
     // Feedback loop timer (fast) assigned to read_cb_group_
     feedback_timer_ = create_wall_timer(
         std::chrono::milliseconds(1),
-        std::bind(&Ugv::feedback_loop, this),
+        std::bind(&UgvCollector::feedback_loop, this),
         read_cb_group_);
 
     // Clock sync timer (slow) assigned to write_cb_group_
-//    clock_sync_timer_ = create_wall_timer(
-//        std::chrono::seconds(60), // Every 1 minute
-//        std::bind(&Ugv::clock_sync, this),
-//        write_cb_group_);
+    command_timer_ = create_wall_timer(
+        std::chrono::seconds(1), // Every second
+        std::bind(&UgvCollector::command_loop, this),
+        write_cb_group_);
 }
 
-Ugv::~Ugv() {
+UgvCollector::~UgvCollector() {
     base_controller_.stop(); // Stop the reading thread
     robot_tools_.close_serial();
 }
 
+bool UgvCollector::is_complete() const {
+    return complete_.load();
+}
+
+double UgvCollector::last_cmd_rad_per_sec_left() const {
+    return last_cmd_left_.load();
+}
+
+double UgvCollector::last_cmd_rad_per_sec_right() const {
+    return last_cmd_right_.load();
+}
+
 // --- Feedback Loop (from ugv_bringup) ---
-void Ugv::feedback_loop() {
+void UgvCollector::feedback_loop() {
+    // stop updating if commands done
+    if (is_complete()) return;
     nlohmann::json data;
     bool loop_timeset_ready = last_timestamp_set_;
     if (base_controller_.get_message_from_queue(data)) {
@@ -139,7 +160,49 @@ void Ugv::feedback_loop() {
     }
 }
 
-void Ugv::publish_imu_data(const nlohmann::json &data)
+void UgvCollector::command_loop() {
+    // stop updating if commands done
+    if (is_complete()) return;
+    // parse the commands one after the other, emitting uart commands to the robot
+    int last_key = commands_.rbegin()->first;
+    if (command_step_ > last_key){
+        // all done!
+        complete_.store(true);
+        return;
+    }
+    if (commands_.find(command_step_) != commands_.end())
+    {
+        auto& cmd = commands_[command_step_];
+
+        if (std::holds_alternative<CmdVel>(cmd)){
+            CmdVel this_command = std::get<CmdVel>(cmd);
+            // pass this on to the robot
+            nlohmann::json cmd_uart;
+            cmd_uart["T"] = 1;
+            cmd_uart["L"] = this_command.left_rps;
+            cmd_uart["R"] = this_command.right_rps;
+            last_cmd_left_.store(this_command.left_rps);
+            last_cmd_right_.store(this_command.right_rps);
+            robot_tools_.send_command(cmd_uart);
+        } else if (std::holds_alternative<CmdPID>(cmd)){
+            CmdPID this_command = std::get<CmdPID>(cmd);
+            // pass this on to the robot
+            nlohmann::json set_pid_cmd;
+            set_pid_cmd["T"] = "2";
+            set_pid_cmd["P"] = this_command.p;
+            set_pid_cmd["I"] = this_command.i;
+            set_pid_cmd["D"] = this_command.d;
+            set_pid_cmd["L"] = this_command.l;
+            robot_tools_.send_command(set_pid_cmd);
+        }
+
+    }
+
+    command_step_++;
+
+}
+
+void UgvCollector::publish_imu_data(const nlohmann::json &data)
 {
   auto msg = std::make_unique<sensor_msgs::msg::Imu>();
   msg->header.stamp = robot_timestamp_;
@@ -156,7 +219,7 @@ void Ugv::publish_imu_data(const nlohmann::json &data)
   imu_pub_->publish(std::move(msg));
 }
 
-void Ugv::publish_mag_data(const nlohmann::json &data)
+void UgvCollector::publish_mag_data(const nlohmann::json &data)
 {
   auto msg = std::make_unique<sensor_msgs::msg::MagneticField>();
   msg->header.stamp = robot_timestamp_;
@@ -169,41 +232,49 @@ void Ugv::publish_mag_data(const nlohmann::json &data)
   mag_pub_->publish(std::move(msg));
 }
 
-void Ugv::publish_odom_data(const nlohmann::json &data)
+void UgvCollector::publish_odom_data(const nlohmann::json &data)
 {
+  enc_rad_per_sec_left.push_back(data["L"].get<float>());
+  cmd_rad_per_sec_left.push_back(last_cmd_rad_per_sec_left());
+  enc_rad_per_sec_right.push_back(data["R"].get<float>());
+  cmd_rad_per_sec_right.push_back(last_cmd_rad_per_sec_right());
+  voltage.push_back(data["v"].get<float>()/100.0);
   auto msg = std::make_unique<std_msgs::msg::Float32MultiArray>();
   msg->data.push_back(data["L"].get<float>());
   msg->data.push_back(data["R"].get<float>());
   odom_pub_->publish(std::move(msg));
 }
 
-void Ugv::set_timestamp(const nlohmann::json &data)
+void UgvCollector::set_timestamp(const nlohmann::json &data)
 {
-  // experimenting
-  // double robot_stamp = data["tsec"].get<float>();
-  // rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
-  // rclcpp::Time robots_robot_timestamp_  = last_clock_sync_sent_time_ + dtSec + rclcpp::Duration::from_seconds(0.02);
+  // for the collector, use the robot timestamps
+  //std::cout << "Parsed feedback: " << data.dump(4) << std::endl;
+  double robot_stamp = data["tsec"].get<float>();
+  time_vec.push_back(robot_stamp);
+  rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
+  rclcpp::Time robots_robot_timestamp_  = last_clock_sync_sent_time_ + dtSec;
+  robot_timestamp_ = robots_robot_timestamp_;
   // for now, we just use host-side timestamps (like the camera and lidar)
-  if (last_timestamp_set_) {
-    rclcpp::Time current_time = this->get_clock()->now();
-    robot_timestamp_ = last_timestamp_ + (current_time - last_timestamp_) * 0.5;
-    last_timestamp_ = current_time;
-    // rclcpp::Duration dt = robots_robot_timestamp_ - robot_timestamp_;
-    // double dt_sec = dt.seconds();
-    // if (iter_count == 100) {
-    //     RCLCPP_INFO(get_logger(), "robot vs orin time: %f", dt_sec);
-    //     iter_count = 0;
-    // }
-    // iter_count += 1;
-    //robot_timestamp_ = robots_robot_timestamp_;
-  }
-  else {
-    last_timestamp_ = this->get_clock()->now();
-    last_timestamp_set_ = true;
-  }
+//   if (last_timestamp_set_) {
+//     rclcpp::Time current_time = this->get_clock()->now();
+//     robot_timestamp_ = last_timestamp_ + (current_time - last_timestamp_) * 0.5;
+//     last_timestamp_ = current_time;
+//     // rclcpp::Duration dt = robots_robot_timestamp_ - robot_timestamp_;
+//     // double dt_sec = dt.seconds();
+//     // if (iter_count == 100) {
+//     //     RCLCPP_INFO(get_logger(), "robot vs orin time: %f", dt_sec);
+//     //     iter_count = 0;
+//     // }
+//     // iter_count += 1;
+//     //robot_timestamp_ = robots_robot_timestamp_;
+//   }
+//   else {
+//     last_timestamp_ = this->get_clock()->now();
+//     last_timestamp_set_ = true;
+//   }
 }
 
-void Ugv::publish_odom(const nlohmann::json &data)
+void UgvCollector::publish_odom(const nlohmann::json &data)
 {
   ekf1Data ekf_data;
   ekf_data.gz_rps = 3.1415926 * data["gz"].get<float>() / (16.4 * 180.0);
@@ -281,14 +352,14 @@ void Ugv::publish_odom(const nlohmann::json &data)
   }
 }
 
-void Ugv::publish_voltage_data(const nlohmann::json& data) {
+void UgvCollector::publish_voltage_data(const nlohmann::json& data) {
     auto msg = std::make_unique<std_msgs::msg::Float32>();
     msg->data = data["v"].get<float>() / 100.0;
     voltage_pub_->publish(std::move(msg));
 }
 
-// --- Clock Sync Loop ---
-void Ugv::clock_sync() {
+// --- Clock Sync command ---
+void UgvCollector::clock_sync() {
     nlohmann::json clock_sync_cmd;
     clock_sync_cmd["T"] = 42;
     
@@ -299,7 +370,7 @@ void Ugv::clock_sync() {
 }
 
 // --- cmd_vel Callback (from ugv_driver_estop) ---
-void Ugv::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
+void UgvCollector::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
     if (estop_) return;
 
     double linear_velocity = msg->linear.x;
@@ -324,7 +395,7 @@ void Ugv::cmd_vel_callback(const geometry_msgs::msg::Twist::SharedPtr msg) {
     robot_tools_.send_command(cmd);
 }
 
-void Ugv::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg) {
+void UgvCollector::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg) {
     bool x_button = msg->buttons[3] > 0;
     bool y_button = msg->buttons[4] > 0;
 
@@ -339,7 +410,7 @@ void Ugv::joy_callback(const sensor_msgs::msg::Joy::SharedPtr msg) {
     }
 }
 
-void Ugv::led_ctrl_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg) {
+void UgvCollector::led_ctrl_callback(const std_msgs::msg::Float32MultiArray::SharedPtr msg) {
     if (msg->data.size() >= 2) {
         nlohmann::json cmd;
         cmd["T"] = 132; 
@@ -349,10 +420,28 @@ void Ugv::led_ctrl_callback(const std_msgs::msg::Float32MultiArray::SharedPtr ms
     }
 }
 
-void Ugv::voltage_callback(const std_msgs::msg::Float32::SharedPtr msg) {
+void UgvCollector::voltage_callback(const std_msgs::msg::Float32::SharedPtr msg) {
     if (0.1 < msg->data && msg->data < 9.0) { 
         // Use parameterized sound path
         std::string command = "aplay -D plughw:2,0 " + low_battery_sound_path_;
         std::system(command.c_str());
     }
+}
+
+void UgvCollector::plot() {
+    // plot results via gnuplot
+    GnuplotPipe gp;
+
+    printf("data collected: %ld \n", time_vec.size());
+    fflush(stdout);
+
+    // left commands/response plot
+    gp.plot_two_ty(time_vec, cmd_rad_per_sec_left, time_vec, enc_rad_per_sec_left, "left: cmd vs enc", 0, "CMD", "ENC");
+
+
+    // right commands/response plot
+    gp.plot_two_ty(time_vec, cmd_rad_per_sec_right, time_vec, enc_rad_per_sec_right, "right: cmd vs enc", 1, "CMD", "ENC");
+
+    // voltage
+    gp.plot_xy(time_vec, voltage,"voltage", 2);
 }
