@@ -95,19 +95,11 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.25
-      yaw_goal_tolerance: 0.25
+      xy_goal_tolerance: 0.1
+      yaw_goal_tolerance: 0.1
     # DWB parameters
     FollowPath:
-      # Shim first… - shim is dodgy in simulation due to the hard-wired
-      plugin: "nav2_rotation_shim_controller::RotationShimController"
-      angular_dist_threshold: 0.1          # rad to path heading before moving
-      forward_sampling_distance: 0.2      # how far along path to estimate heading
-      rotate_to_heading_angular_vel: 1.5   # rad/s
-      max_angular_accel: 3.0
-      simulate_ahead_time: 1.0
-      rotate_to_goal_heading: true         # also align at goal (optional)
-      primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.32
       lookahead_dist: 0.5
       use_velocity_scaled_lookahead_dist: false
@@ -115,6 +107,7 @@ controller_server:
       approach_velocity_scaling_distance: 0.05
       use_rotate_to_heading: false
       allow_reversing: true
+
 
 local_costmap:
   local_costmap:
