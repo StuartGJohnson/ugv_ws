@@ -146,7 +146,7 @@ def generate_launch_description():
             os.path.join(get_package_share_directory('nav2_bringup'), 'launch', 'navigation_launch.py')
         ),
         launch_arguments={
-            'params_file': 'nav2_rtabmap_gt_no_rot_params.yaml',
+            'params_file': 'nav2_rtabmap_no_rot_params.yaml',
         }.items(),
     )
 

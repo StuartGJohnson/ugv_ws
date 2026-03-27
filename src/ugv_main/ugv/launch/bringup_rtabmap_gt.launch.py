@@ -133,7 +133,7 @@ def generate_launch_description():
 
     camera_sync = Node(
         package='rtabmap_sync', executable='rgbd_sync', output='screen',
-        parameters=[{'approx_sync':False}],
+        parameters=[{'approx_sync':True}],
         remappings=[
             ('rgb/image', '/camera/color/image_raw'),
             ('rgb/camera_info', '/camera/color/camera_info'),

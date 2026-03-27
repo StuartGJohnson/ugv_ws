@@ -21,10 +21,10 @@ TEST(TunePID, TestUgvCollector) {
     // set up command sequence
     std::map<int, Command> commands;
     commands[0] = CmdVel{0.0, 0.0};
-    commands[0] = CmdPID{40.0, 1000.0, 0.0, 0.0};
-    commands[1] = CmdVel{0.25, -0.25};
-    commands[2] = CmdVel{0.0, 0.0};
+    commands[1] = CmdPID{40.0, 1000.0, 0.0, 0.0};
+    commands[2] = CmdVel{0.25, -0.25};
     commands[3] = CmdVel{0.0, 0.0};
+    commands[4] = CmdVel{0.0, 0.0};
     int argc = 0;
     char ** argv = nullptr;
     rclcpp::init(argc, argv);

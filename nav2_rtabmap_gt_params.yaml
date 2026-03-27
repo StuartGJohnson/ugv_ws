@@ -110,6 +110,8 @@ controller_server:
       primary_controller: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
       desired_linear_vel: 0.32
       lookahead_dist: 0.5
+      min_approach_linear_velocity: 0.2
+      approach_velocity_scaling_distance: 0.05
       use_velocity_scaled_lookahead_dist: false
 #      plugin: "dwb_core::DWBLocalPlanner"
 #      debug_trajectory_details: True
