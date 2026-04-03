@@ -37,8 +37,8 @@ def generate_launch_description():
           # RTAB-Map's parameters should be strings:
           #'Reg/Strategy':'2', # for cloud only
           'Reg/Strategy': '1',
-          'RGBD/LinearUpdate' : '0.10',
-          'RGBD/AngularUpdate' : '0.10',
+          'RGBD/LinearUpdate' : '0.010',
+          'RGBD/AngularUpdate' : '0.010',
           'Mem/STMSize':'0',
           'Reg/Force3DoF':'true',
           'RGBD/NeighborLinkRefining':'true',
