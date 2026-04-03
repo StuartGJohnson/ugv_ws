@@ -1,0 +1,1788 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>UGV02x</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+    <style>
+      /* Dark-theme friendly: inherit colors, no sticky */
+      .toc { margin: 1rem 0; padding: 0; }
+      .toc ul { list-style: none; margin: 0; padding-left: 0; }
+      .toc li { margin: 0.125rem 0; }
+      .toc a { color: inherit; text-decoration: none; display: block; line-height: 1.25; }
+      .toc a:hover { text-decoration: underline; }
+
+      /* Indentation + subtle size by level */
+      .toc ul ul { padding-left: 1rem; }
+      .toc a.lvl-1 { font-weight: 600; font-size: 1.00em; }
+      .toc a.lvl-2 { font-weight: 500; font-size: 0.97em; opacity: .95; }
+      .toc a.lvl-3 { font-weight: 500; font-size: 0.94em; opacity: .88; }
+      .toc a.lvl-4 { font-weight: 400; font-size: 0.92em; opacity: .80; }
+      .toc a.lvl-5 { font-weight: 400; font-size: 0.90em; opacity: .75; }
+      .toc a.lvl-6 { font-weight: 400; font-size: 0.88em; opacity: .70; }
+
+      /* If you have a fixed header, make anchors land below it: adjust as needed */
+      h1, h2, h3, h4, h5, h6 { scroll-margin-top: 64px; }
+    </style>
+
+    <style>
+      /* optional, but makes it look terminal-ish and preserves tabs */
+      .term {
+        white-space: pre;       /* keep spaces/newlines exactly */
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        tab-size: 4;
+        padding: .75rem;
+        border: 1px solid #444;
+        border-radius: 8px;
+        overflow: auto;         /* horizontal scroll instead of wrapping */
+      }
+    </style>
+
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0b0c10;
+            color: #e5e7eb;
+            font: 14px/1.4 system-ui, sans-serif;
+        }
+
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Lightbox modal */
+        #svgLightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .75);
+            display: none;
+            z-index: 9999;
+        }
+
+        #svgStage {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+        }
+
+        /* content layer */
+        #svgStage svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        #svgToolbar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 3;
+        }
+
+        /* above stage */
+        #svgClose {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 3;
+        }
+
+        #svgStatus {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+            z-index: 3;
+            color: #cbd5e1;
+            background: rgba(0, 0, 0, .5);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        #svgToolbar button, #svgClose {
+            background: #1f2937;
+            color: #e5e7eb;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        #svgToolbar button:hover, #svgClose:hover {
+            background: #0b1220;
+        }
+      /* Namespaced so it won't collide with your styles */
+      .mp4-mini {
+        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
+        color: #e5e7eb;
+        background: #0b1220;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 10px;
+        width: min(100%, 900px);
+      }
+      .mp4-mini-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .mp4-mini video {
+        position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+      }
+      .mp4-mini-controls {
+        display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+      }
+      .mp4-mini button, .mp4-mini input {
+        background: #0f172a; color: #e5e7eb; border: 1px solid #263042; border-radius: 8px;
+        padding: 6px 10px; font: inherit; cursor: pointer;
+      }
+      .mp4-mini button:hover { border-color: #3b82f6; }
+      .mp4-mini .mp4-mini-speed input { width: 70px; text-align: right; }
+      .mp4-mini .spacer { flex: 1; }
+        </style>
+        <script src="https://unpkg.com/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+
+    <!-- Babylon core + loaders (non-module, safe for most hosting) -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+    <style>
+      /* Namespaced viewer styles; safe to mix with your page CSS */
+      .glb-viewer{
+        overscroll-behavior: contain;
+        position: relative;
+        width: min(100%, 900px);           /* tweak as you like */
+        aspect-ratio: 16 / 9;
+        background: #0b0c10;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .glb-canvas{
+        position: absolute; inset: 0;
+        touch-action: none;
+        width: 100%; height: 100%;
+        display: block;
+      }
+      .glb-status{
+        position: absolute; left: 8px; top: 8px;
+        font: 12px/1.35 system-ui, sans-serif;
+        color: #e5eef5; max-width: 60ch;
+        background: rgba(0,0,0,.55);
+        padding: 6px 10px; border-radius: 8px;
+        white-space: pre-wrap; z-index: 2;
+        pointer-events: none;
+      }
+    </style>
+
+    <!-- Mermaid (global/UMD build, stable v10) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <style>
+      .mmd{
+        display: inline-block;      /* shrink-wrap */
+        vertical-align: top;
+        margin: 8px;
+        background: #0b1220;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 10px;
+        visibility: hidden;         /* hide DSL until we size the SVG */
+        overflow: visible;
+        max-width: 100%;            /* stay responsive in narrow columns */
+      }
+      .mmd svg{
+        display: block;             /* no inline gaps */
+        /* we'll set explicit pixel width/height via JS */
+      }
+      .mmd-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; }
+      .mmd-row .mmd{ margin:0; }
+    </style>
+
+    <style>
+      .mmd-figure{
+        display:inline-block;       /* shrink-wrap each diagram+caption */
+        vertical-align: top;
+        margin:8px;
+        text-align:center;
+      }
+      .mmd-figure .mmd{             /* your diagram block */
+        display:block;
+        margin:0;                   /* figure controls spacing now */
+      }
+      .mmd-caption{
+        margin-top:6px;
+        font:12px/1.35 system-ui, sans-serif;
+        color:#a8b3c7;
+      }
+      /* if you use the flex row helper */
+      .mmd-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; }
+      .mmd-row .mmd-figure{ margin:0; }
+    </style>
+
+    <!-- Graphviz WASM (ES module); creates window.__graphvizPromise -->
+    <script type="module">
+      import { Graphviz } from "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm@2/dist/index.min.js";
+      window.__graphvizPromise = Graphviz.load();
+    </script>
+
+    <style>
+      /* Tight, stackable graph blocks */
+      .dot-figure{ display:inline-block; vertical-align:top; margin:8px; text-align:center; }
+      .dot{ display:block; background:#0b1220; border:1px solid #334155; border-radius:10px; padding:10px; }
+      /* Shrink-wrap to SVG’s own size, but allow shrinking in narrow columns */
+      .dot svg{ display:block; width:auto; height:auto; max-width:100%; }
+      .dot-caption{ margin-top:6px; font:12px/1.35 system-ui,sans-serif; color:#a8b3c7; }
+      /* Hide raw DOT text to avoid flash-of-dot (FOD) */
+      .dot { visibility: hidden; }
+      /* Reveal after we inject the SVG */
+      .dot[data-rendered="true"] { visibility: visible; }
+
+    </style>
+
+    <style>
+      /* Figure wrapper */
+      .tbl-figure{ display:inline-block; vertical-align:top; margin:12px; text-align:center; }
+
+      /* Scrollable frame (so wide tables don’t blow the layout) */
+      .tbl-wrap{
+        max-width:min(100%, 900px);
+        background:#0b1220;
+        border:1px solid #334155;
+        border-radius:10px;
+        overflow:auto;            /* horizontal scroll if needed */
+      }
+
+      /* Table core */
+      /* Table core */
+      .tbl{
+        border-collapse:separate; border-spacing:0; width:100%;
+        font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+        color:#e5e7eb;
+      }
+      .tbl caption{ caption-side:top; padding:8px 12px; font-weight:600; color:#cbd5e1; }
+      .tbl th, .tbl td{ padding:8px 12px; border-bottom:1px solid #1f2937; vertical-align:top; }
+      .tbl thead th{
+        position:sticky; top:0; z-index:1;
+        background:#0f172a; color:#e2e8f0; border-bottom:1px solid #334155;
+        text-align:left; font-weight:600;
+      }
+      .tbl tbody tr:nth-child(odd){ background:#0c1220; }
+      .tbl tbody tr:hover{ background:#0d1626; }
+
+      /* Rounded corners on the container + top row */
+      .tbl thead th:first-child{ border-top-left-radius:10px; }
+      .tbl thead th:last-child{ border-top-right-radius:10px; }
+      .tbl tr:last-child td:first-child{ border-bottom-left-radius:10px; }
+      .tbl tr:last-child td:last-child{ border-bottom-right-radius:10px; }
+
+      /* Utilities */
+      .tbl .num{ text-align:right; font-variant-numeric:tabular-nums; }
+      .tbl .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .tbl-compact .tbl th, .tbl-compact .tbl td{ padding:6px 10px; }
+
+      /* Figure caption */
+      .tbl-caption{ margin-top:6px; font:12px/1.35 system-ui, sans-serif; color:#a8b3c7; }
+
+      /* Accessibility helper to hide a table caption but keep it for screen readers */
+      .visually-hidden{
+        position:absolute !important; height:1px; width:1px; overflow:hidden;
+        clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px;
+      }
+      /* Opt-in vertical column borders */
+      .tbl.tbl-cols th,
+      .tbl.tbl-cols td {
+        border-right: 1px solid #1f2937; /* same tone as your row dividers */
+      }
+      .tbl.tbl-cols th:last-child,
+      .tbl.tbl-cols td:last-child {
+        border-right: none;              /* no border on the far right edge */
+      }
+
+      /* Optional: only body gets column borders (header stays clean) */
+      .tbl.tbl-cols-body tbody td { border-right: 1px solid #1f2937; }
+      .tbl.tbl-cols-body tbody td:last-child { border-right: none; }
+
+    </style>
+
+    <style>
+        .fig-center { text-align: center; }              /* centers inline-block children */
+        .fig-center > .figure,
+        .fig-center > .dot-figure,
+        .fig-center > .mmd-figure,
+        .fig-center > .tbl-figure {
+            display: inline-block; /* shrink-wrap */
+            text-align: left; /* keep captions left if you want */
+        }
+    </style>
+
+</head>
+
+<body>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://threejs.org/build/three.module.js",
+        "three/addons/": "https://threejs.org/examples/jsm/"
+    }
+}</script>
+
+<!-- Include the module once on the page -->
+<script type="module" src="viewer-pcd.js"></script>
+
+<h1>UGV02x Projects</h1>
+
+<nav id="toc" aria-label="Table of contents"></nav>
+
+<main>
+<h1>Project Indoor Explorer</h1>
+
+<h2>Intent of this page</h2>
+<p>This page attempts to document the project from a conceptual perspective. Code installation and usage are left (mostly) to the parent repository at <a href="https://github.com/StuartGJohnson/ugv_ws">ugv_ws</a> or repositories referenced therein.</p>
+
+<h2>Project Goal</h2>
+<p>Autonomously explore and map an indoor environment in simulation and reality. Prior knowledge of the environment - or previous exploration and mapping by a human operator - is not allowed.</p>
+
+<h2>Hardware</h2>
+
+<p>Robot UGV02x (my versioning!) is based on the Waveshare UGV02 skid-steer platform (ref). The platform is customized via an NVIDIA Orin AGX compute module, with usb-connected lidar and depth-camera, supported by a 100Wh Li-Ion battery (see the parts list in table 1). The system diagrams in mobile and dev configurations are shown in figures 1 and 2.</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart BT
+        A[UGV02] <--> |usb| B[usb_isolator]
+        B <--> |usb| C[Orin]
+        D[battery] --> |usbc| C
+        E[lidar] --> |usb| C
+        F[depth camera] --> |usbc| C
+        C <--> G[802.11ac\nwireless]
+        C <--> H[500GB\nNVME\nSSD]
+    </pre>
+    <figcaption class="mmd-caption">Fig 1: UGV02x Robot connectivity (mobile config)</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart BT
+        AA["12.6V\nAC Adapter"] --> |charging port| A
+        A[UGV02] <--> |usb| B[usb_isolator]
+        B <--> |usb| C[Orin]
+        D[battery] --> |usbc| C
+        E[lidar] --> |usb| C
+        F[depth camera] --> |usbc| C
+        C <--> G["wired\nethernet"]
+        C <--> H[500GB\nNVME\nSSD]
+        I[19.5V\nAC Adapter] --> C
+    </pre>
+    <figcaption class="mmd-caption">Fig 2: UGV02x Robot connectivity (dev config)</figcaption>
+</figure>
+
+<p>In dev config, the Orin is connected via wired ethernet and is powered from an external transformer from 120VAC. The purpose of the USB isolator is to isolate the battery system of the Waveshare UGV02 robot from the Orin/sensor battery shown - they only share a ground. In fact, the USB isolator had to be electrically modified to disconnect the supply voltage passthrough from the orin. Any external battery to buffer the UGV02 batteries should be plugged into the UGV02 charging port. The battery configuration shown results in many hours of robot operation.</p>
+
+<p>The Waveshare UGV02 contains a ESP32 microcontroller with connected IMU, 4 motor PWM controllers, and 2 wheel encoders (on the front wheels). See figure 3.</p>
+
+<figure class="dot-figure">
+  <pre class="dot" data-engine="neato">
+    digraph G {
+      layout=neato; overlap=false; splines=true; node [shape=box, fixedsize=false, width=1, height=0.5];
+      L1 [label="LF motor/\nencoder"] [pos="0,1!"];
+      L2 [label="LR motor"] [pos="0,0!"];
+      C1 [label="USB/UART"][pos="2,1.5!"];
+      C2 [label="ESP32\ncontroller"][pos="2,0.5!"];
+      C3 [label="IMU"][pos="2,-0.5!"];
+      C4 [label="3x18650\nbatteries"][pos="2,-1.5!"];
+      R1 [label="RF motor/\nencoder"] [pos="4,1!"];
+      R2 [label="RR motor"] [pos="4,0!"];
+      L1 -> C2 [dir=both]; R1 -> C2[dir=both]; C2 -> C1[dir=both]; C3 -> C2; C4 -> C2; C2 -> L2; C2 -> R2;
+    }
+  </pre>
+  <figcaption class="mmd-caption">Fig. 3 — UGV02 internal components</figcaption>
+</figure>
+
+<p>The Bill of Materials for UGV02x follows (table 1).</p>
+
+<figure class="tbl-figure">
+  <div class="tbl-wrap">
+    <table class="tbl tbl-cols" aria-describedby="t1-caption">
+      <!-- Visible <figcaption> below, and an invisible <caption> for SRs -->
+      <caption class="visually-hidden">UGV fleet summary (units, status, battery)</caption>
+      <thead>
+        <tr>
+          <th>Manuf.</th>
+          <th>Model</th>
+          <th>Description</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Waveshare</th>
+          <td>UGV02</td>
+          <td>skid-steer robot platform</td>
+          <td>1</td>
+        </tr>
+      <tbody>
+        <tr>
+          <td>NVIDIA</td>
+          <td>AGX Orin 64GB</td>
+          <td>Compute node</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>Samsung</td>
+          <td>970 EVO</td>
+          <td>M.2 SSD 500GB</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>LDRobot</td>
+          <td>STL-19P</td>
+          <td>2D lidar</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>Intel</td>
+          <td>Realsense D435</td>
+          <td>RGBD camera</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Jhoinrch</td>
+          <td>Rho 5 Mark II</td>
+          <td>USB Isolator (modified to remove Vcc connection on the UGV02 side)</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Goal Zero</td>
+          <td>Sherpa 100PD</td>
+          <td>Li-Ion 100 Wh rechargeable battery</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Samsung</td>
+          <td>INR 18650-35E</td>
+          <td>18650 Li-Ion rechargeable flat-top (not button-top) battery. 3500mAh.</td>
+          <td>3</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Central Computers</td>
+          <td>USB 3.2 Gen 2 Type-C Cable</td>
+          <td>3 ft. Depth Camera/Orin Power cable (cable ratings: 20Gbps, 20v 5A)</td>
+          <td>2</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>Central Computers</td>
+          <td>USB Type-C 90 degree Male to Female Adapter</td>
+          <td>Depth Camera data cable management adapter (ratings: 40Gbps, 48v 5A)</td>
+          <td>2</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>DongGuan Simer Electronics Co, LTD</td>
+          <td>SK90B195462 AC Adapter</td>
+          <td>Orin power supply. Output 19.5V @ 4.62A</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>China</td>
+          <td>RXW-0698-12.6V2A batter charger AC Adapter</td>
+          <td>UGV02 battery charger power supply. Output 12.6V @ 2A</td>
+          <td>1</td>
+        </tr>
+      </tbody>
+      <tbody>
+        <tr>
+          <td>3M</td>
+          <td>RF6730 Scotch Extreme Fasteners</td>
+          <td>Adhesive-backed high-strength velcro 1x3 inch strip pairs for robot component connections</td>
+          <td>8</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <figcaption id="t1-caption" class="mmd-caption">Table 1 — UGV02x parts list.</figcaption>
+</figure>
+
+<h2>Firmware: UGV02 ESP32</h2>
+
+<p>For this project, the UGV02 is running the <a href="https://github.com/waveshareteam/ugv_base_ros"> ugv_base_ros</a> ESP32 firmware, applied to the robot via the ESP32 firmware updater. See the <a href="https://www.waveshare.com/wiki/UGV02">Waveshare UGV02 Wiki</a> section on firmware updates for more details. This firmware is quite accessible via the Arduino IDE and future tweaks are anticipated. For example, the PWM rate seems awfully high (100kHz). Figure 4 shows the basic functions of the firmware as it applies to the ROS2 interface in terms of wheel control.</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart LR
+        subgraph O["Orin ugv_main ROS2 pkgs"]
+            direction TB
+            A["ROS2\n/cmd_vel\ntopic"] --> BLR["inverse\nkinematics"]
+            BLR --> CLR["L/R\nang. vel"]
+            CLR --> DLR["JSON"]
+        end
+        subgraph FW["UGV02 ESP32 firmware"]
+            direction BT
+            D["L wheel encoder"] --> CL
+            B["L/R ang. vel\ntargets"] --> CL["L wheel\nang. vel PID"]
+            B --> CR["R wheel\nang. vel PID"]
+            E["R wheel encoder"] --> CR
+            CL --> LP["L wheel PWM"]
+            CR --> RP["R wheel PWM"]
+        end
+        DLR --> |usb| B
+    </pre>
+    <figcaption class="mmd-caption">Fig 4: wheel (speed) control</figcaption>
+</figure>
+
+
+<p>Since the inverse kinematics are on the ROS2 side, I do some nominal understeer compensation by inflating the true lateral wheel separation (by a factor of 2). Figure 5 shows the firmware functions regarding transmission of robot state back to ROS2 via USB.</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart LR
+        subgraph FW["UGV02 ESP32 firmware"]
+            direction BT
+            D["IMU"] --> E["JSON polling\nencode\n(20Hz)"]
+            F["L wheel\nencoder"] --> E
+            G["R wheel\nencoder"] --> E
+            H["voltage"] --> E
+        end
+        subgraph O["Orin ugv_bringup ROS2 pkgs"]
+            direction TB
+            OB["JSON polling\n(1kHz) decode"]
+            OB --> T1["ROS2\n/imu_data_raw\ntopic"]
+            OB --> T2["ROS2\n/imu_mag\ntopic"]
+            OB --> T3["ROS2\n/odom_raw\ntopic"]
+            OB --> T4["ROS2\n/voltage\ntopic"]
+        end
+        E --> |usb| OB
+    </pre>
+    <figcaption class="mmd-caption">Fig 5: robot sensor feedback</figcaption>
+</figure>
+
+<h2>Software packaging: Linux</h2>
+
+<p>UGV02x Linux software consists of existing ROS2 Humble packages, custom ROS2 device and project packages, and modified versions of the Waveshare UGV02 ROS2 packages/workspace <a href="https://github.com/waveshareteam/ugv_ws"> Waveshare ugv_ws</a>. A typical setup for the mobile (real) robot environment is shown in figure 3. All Linux compute platforms are running Ubuntu 22.04 and ROS2 Humble. No containers or VMs are used in this project. Generally, simulation and development are performed on a capable (memory, disk, compute, etc.) Linux computer. The configuration of this computer also makes it useful as a top level orchestrator/observer for exploration and mapping. The details of navigation and exploration algorithms used in this project are discussed in the Exploration and Navigation section below.</p>
+
+<h3> The UGV02x Orin ROS2 SW stack</h3>
+
+    <ul style="list-style-type: none;">
+        <li> ugv_ws (ROS2 workspace)
+            <ul style="list-style-type: none;">
+                <li> custom package configuration files </li>
+                <li> ROS2 packages (github.com/StuartGJohnson)
+                    <ul style="list-style-type: none;">
+                        <li>ugv_main</li>
+                        <li>point_cloud_tools</li>
+                        <li>frontier_explorer</li>
+                    </ul>
+                </li>
+                <li> ROS2 packages (github)
+                    <ul style="list-style-type: none;">
+                        <li>rf2o_laser_odometry</li>
+                        <li>ldlidar_stl_ros2</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li> ROS2 Humble (apt install)
+            <ul style="list-style-type: none;">
+                <li>nav2</li>
+                <li>rtabmap</li>
+                <li>realsense2</li>
+                <li>...</li>
+            </ul>
+        </li>
+        <li> Ubuntu 22.04 LTS </li>
+    </ul>
+
+
+<h3> The Linux manager/dev/simulation node SW stack </h3>
+    <ul style="list-style-type: none;">
+        <li> ugv_ws (ROS2 workspace)
+            <ul style="list-style-type: none;">
+                <li> exploration_orchestrator.py </li>
+                <li> custom package configuration files </li>
+                <li> ROS2 packages (github.com/StuartGJohnson)
+                    <ul style="list-style-type: none;">
+                        <li>ugv_main</li>
+                        <li>point_cloud_tools</li>
+                        <li>frontier_explorer</li>
+                        <li>rviz_record</li>
+                        <li>gazebo_differential_drive_robot_4wheel</li>
+                    </ul>
+                </li>
+                <li> ROS2 packages (github)
+                    <ul style="list-style-type: none;">
+                        <li>rf2o_laser_odometry</li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+        <li> ROS2 Humble viz and simulation
+            <ul style="list-style-type: none;">
+                <li>Gazebo Garden</li>
+                <li>rviz2</li>
+                <li>rqt</li>
+            </ul>
+        </li>
+        <li> ROS2 Humble (apt install)
+            <ul style="list-style-type: none;">
+                <li>nav2</li>
+                <li>rtabmap</li>
+                <li>...</li>
+            </ul>
+        </li>
+        <li> Ubuntu 22.04 LTS </li>
+    </ul>
+
+<p>A mobile deployment utilizing 802.11ac wireless (as supported by the Orin AGX out-of-the-box) is shown in figure 6. The manager computer and wireless router can be run entirely on battery - for remote operations (a different project!).</p>
+
+<figure class="dot-figure">
+  <pre class="dot" data-engine="neato">
+    digraph G {
+      layout=neato; overlap=false; splines=true; compound=false;
+      node [shape=box, fontname="system-ui"];
+
+      subgraph cluster_L {
+        label="manager";
+        style="rounded,dotted";
+        color="#60a5fa"; penwidth=2;
+      L0 [label="", shape=box, style=invis, fixedsize=true, pos="0,2.5!", width="1.75",height="0.25"];
+      L1 [label="wireless\nrouter",pos="0,1.5!",fixedsize=false];
+      L2 [label="linux host",pos="0,0.5!",fixedsize=false];
+      L3 [label="battery\n(optional)",pos="0,-0.25!",fixedsize=false];
+      L4 [label="",shape=box, style=invis, fixedsize=true, pos="0,-0.75!", width="1.75",height="0.25"];
+      }
+
+      subgraph cluster_R {
+        label="UGV02x";
+        style="rounded,dotted";
+        color="#60a5fa"; penwidth=2;
+      R0 [label="", shape=box, style=invis, fixedsize=true, pos="3.5,2.25!", width="1.75",height="0.25"];
+      R1 [label="PCI-E\n802.11ac\nwireless", pos="3.5,1.75!", fixedsize=false];
+      R2 [label="Orin AGX",                 pos="3.5,0!", fixedsize=false];
+      R3 [label="", shape=box, style=invis, fixedsize=true, pos="3.5,-0.5!", width="1.75",height="0.25"];
+      }
+
+      // Edges
+      L1 -> L2 [dir=both];
+      R1 -> R2 [dir=both];
+      L1 -> R1 [dir=both, style=dotted];
+    }
+  </pre>
+  <figcaption class="mmd-caption">Fig 6: Mobile robot operation. We assume the UGV02x is in mobile configuration.</figcaption>
+</figure>
+
+<h2>Simulation</h2>
+
+<p>For the simulated goal, procedurally generated worlds are used to test appropriate functionality in the SW and HW stack. This is described in <a href="https://github.com/StuartGJohnson/WorldGeneration"> World Generation</a>. Figure 7 shows a simulated scene which has been tuned to provide a set of obstacles of varying heights through which the robot must explore to complete the project goal. These objects are not all imaged in the robot lidar - some are below the lidar height and will only be imaged in the depth camera - when the robot is nearby.</p>
+
+<figure class = "figure">
+    <div class="glb-viewer" data-src="scene_stuffx2.glb" data-bg="#111827" data-autospin="false"></div>
+    <figcaption class="mmd-caption">Fig 7: Simulated scene for the project goal. This .glb file is interactive!</figcaption>
+</figure>
+
+<p>The simulated UGV02x robot is provided via XACRO file in <a href="https://github.com/StuartGJohnson/gazebo_differential_drive_robot_4wheel"> Gazebo UGV02x robot</a> and is shown in figure 8. This robot model is intentionally not photo-realistic. The point of this robot model is to accurately represent the spatial and inertial aspects of the robot with a minimum of geometric complexity. The robot XACRO file is also used to compute the static transforms of the real robot during operation.</p>
+
+<figure class = "figure">
+    <div class="glb-viewer" data-src="ugv.glb"></div>
+    <figcaption class="mmd-caption">Fig 8: Simulated robot. This .glb file is interactive!</figcaption>
+</figure>
+
+<p> Simulation is performed via the (Ignition) <code>gz sim</code> version of Gazebo - which, for ROS2 humble, is Gazebo Garden. This is not to be confused with Gazebo Classic or later versions of (Ignition) Gazebo. Simulation via IsaacSim was partially completed and partially successful, but has been set aside due to fundamental limitations of IsaacSim - specifically, IsaacSim does not support the necessary nuances of friction which allow the robot wheels to realistically slip sideways - a critical feature for skid-steer robots. Well, skid-steer robots that turn.</p>
+
+<p>For immediate comparison, I include a photo of the real robot (in mobile configuration) in figure 9. </p>
+
+<figure class = "figure">
+    <img src="ugv02x.jpg" width="800">
+    <figcaption class="mmd-caption">Fig 9: Real robot. This .jpg file is NOT interactive!</figcaption>
+</figure>
+
+<h2>Odometry: sim vs real</h2>
+
+<p>For the purposes of timely project completion, odometry is computed differently in simulation and reality. A future project will involve - minimally - fusing IMU and odometry data for a low-level estimate of odometry. The necessary data acquisition and analysis was deemed a rabbit-hole of excessive depth for the purposes of this project.</p>
+
+<div class="mmd-row">
+    <figure class="mmd-figure">
+     <pre class="mmd">
+     flowchart TD
+      A["/scan"] --> B[rf2o_laser_odometry]
+      B --> C["/odom"]
+      B --> D["/tf"]
+     </pre>
+    <figcaption class="mmd-caption">Fig 10: Real robot odometry</figcaption>
+    </figure>
+    <figure class="mmd-figure">
+     <pre class="mmd">
+     flowchart TD
+      A[Gazebo diff drive] --> B["/odom"]
+      A --> C["/tf"]
+    </pre>
+    <figcaption class="mmd-caption">Fig 11: Simulated robot odometry</figcaption>
+    </figure>
+</div>
+
+<p>As shown in figures 10 and 11, odometry computation - and subsequent updates to the /tf tree - happen differently for the real and simulated robots. For the real robot, odometry is entirely calculated from the laser scan updates via <code>rf2o_laser_odometry</code>. As mentioned above, this is a temporary workaround. For the simulated robot, odometry is computed from the wheel velocities resulting from the <code>/cmd_vel</code> commands sent to the robot. The wheel separation parameter of the simulated robot kinematics has been calibrated (increased) so that - given the wheel slip settings in the simulator - the simulated robot motion follows the odometry fairly closely. This assumes the slip characteristics of the floor are fixed and known. From the point of view of the ROS2 nav2 SW stack, it is useful to review the purpose of odometry: <a href="https://docs.nav2.org/concepts/index.html#odometry">odometry for nav2</a>.</p>
+
+<h2>Depth camera and Lidar processing: sim vs real</h2>
+
+<p>Depth camera and Lidar processing is implemented differently for the simulated and real robots. This stems from two issues: </p>
+<ol>
+    <li>Gazebo Garden (a sub-version of Gazebo Fortress) does not easily allow for the processing of the depth image stream into point clouds. As far as I can tell, Gazebo is not providing the proper camera extrinsics to properly convert rgba or depth images into a point cloud. However, Gazebo Garden DOES provide a proper point cloud directly. I attempted to address this issue via introducing a camera optical frame in the transform tree (as suggested in the ROS2 Gazebo community), but this did not fix the problem (it did improve it!).</li>
+    <li>Conversely, the (actual) Intel D435 ROS2 package does NOT provide a working point cloud directly from the camera. This appears to be a very version-specific issue, as an apt update during robot development eliminated my ability to get point clouds from the camera. Driver regression did not seem to address the issue. Never a dull moment! </li>
+</ol>
+
+<p>These two problems conspire to make the processing different for sim and real robots. The solution I worked out is shown in figures 12 and 13. A full dump of the real-time ROS2 computation graphs (from rqt) are provided in the section ROS2 Exploration and Navigation section below.</p>
+
+<div class="mmd-row">
+    <figure class="mmd-figure">
+     <pre class="mmd">
+     flowchart TD
+      A["camera"] --> C["/rgb"]
+      A --> D["/depth"]
+      B[lidar] --> E["/scan"]
+      C --> F[rgbd_sync]
+      D --> F
+      D --> G[point_cloud_xyz]
+      F --> H[rgbd_image]
+      G --> I["/camera/cloud"]
+      H --> J[rtabmap]
+      E --> J
+      subgraph K[NAV2]
+        direction LR
+        L[global_costmap]
+        M[local_costmap]
+      end
+      E --> L
+      E --> M
+      I --> L
+      I --> M
+      J --> K
+     </pre>
+    <figcaption class="mmd-caption">Fig 12: Real robot camera/lidar processing</figcaption>
+    </figure>
+    <figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart TD
+      A["camera"] --> C["/rgb"]
+      A --> D["/points"]
+      B[lidar] --> E["/scan"]
+      D --> F[voxel_filter]
+      F --> G["/camera/cloud"]
+      G --> H[point_cloud_fuser]
+        E --> H
+      C --> I[rtabmap]
+      H --> I
+      subgraph J[NAV2]
+        direction LR
+        K[global_costmap]
+        L[local_costmap]
+      end
+      E --> K
+      E --> L
+      G --> K
+      G --> L
+      I --> J
+    </pre>
+    <figcaption class="mmd-caption">Fig 13: Simulated robot camera/lidar processing</figcaption>
+    </figure>
+</div>
+
+<h2>Depth camera calibration</h2>
+
+<p>The Intel Realsense camera is not quite viewing the world from the perspective one might expect. In particular, when running in the mode used in this project, the resulting depth cloud is not centered on the camera housing - it is more or less centered on the left camera aperture. One way to deal with this is to develop a calibration procedure for the static transform tree of the depth camera sensor.</p>
+
+<h3>Exteroceptive sensor transform tree</h3>
+<p>The real and simulated robots <i>almost</i> share an xacro file - that is, the file which defines the component physical relationships and properties. The difference between the two files are the transform settings of a <i>calibration</i> joint for the depth camera. This calibration is defined in both files. The simulated robot has a unit calibration transformation, whereas the real robot does not. The goal of calibration is to find the calibration transform. In this section, we only discuss the depth camera calibration. Also, we assume that the intrinsic and extrinsic calibration(s) of the depth camera have already been done - there are tools for this in the intel SW.</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart BT
+      BF(["base_footprint"]) --> BFJ["base_footprint_joint"]
+      BFJ --> BL(["base_link"])
+      BL --> BJ["battery_joint"]
+      BJ --> BAL(["battery_link"])
+      BAL --> OJ["orin_joint"]
+      OJ --> OL(["orin_link"])
+      OL --> LJ["lidar_joint"]
+      LJ --> LL(["lidar_link"])
+      OL --> DJ["d435_joint"]
+      DJ --> CPL(["camera_pre_link"])
+      CPL --> DCJ[["d435_calibration_joint"]]
+      DCJ --> CL(["camera_link"])
+    </pre>
+    <figcaption class="mmd-caption">Fig 14: The exteroceptive sensor transform tree. Each rounded node is a coordinate frame. Each rectangular node is fixed joint - a transform between frames. The calibration joint in question is in a special rectangle.</figcaption>
+</figure>
+
+<h3>Calibration process</h3>
+<p>The process for determining the calibration transform is as follows:
+</p>
+<ul>
+    <li> Set up the real robot in the calibration scene. See figure 15.</li>
+    <li> Bring up the robot sensors:
+        <ul>
+            <li>
+                <code>ros2 launch ugv_bringup bringup_sensors.launch.py</code>
+            </li>
+        </ul>
+    </li>
+    <li> Grab a point cloud from the depth camera <i>in the camera_pre_link frame</i>:
+        <ul>
+            <li>
+            <code>python3 save_pcd_tf.py -t /camera/cloud -F camera_pre_link -o cloud_real_bin_cal_repo1.pcd --binary --latest</code>
+            </li>
+        </ul>
+    </li>
+    <li>Shut down the real robot.</li>
+    <li> Bring up the sim robot (sensors) in the simulated calibration scene (figure 16):
+        <ul>
+            <li>
+                <code>ros2 launch ugv_bringup bringup_sensors_sim.launch.py</code>
+            </li>
+        </ul>
+    </li>
+    <li> Grab a point cloud from the simulated depth camera <i>in the camera_pre_link frame</i>:
+        <ul>
+            <li>
+            <code>python3 save_pcd_tf.py -t /camera/cloud -F camera_pre_link -o cloud_sim_bin_cal_repo1.pcd --binary --latest</code>
+            </li>
+        </ul>
+    </li>
+    <li>Shut down the simulated robot.</li>
+    <li>Register the two point clouds, and compute a transform <i>in the camera_pre_link frame</i>. I use ICP in the point-to-plane mode (see the source code mentioned):
+         <ul>
+            <li>
+            <code>python3 register_pcd.py -s cloud_real_bin_cal_repo1.pcd -t cloud_sim_bin_cal_repo1.pcd -d</code>
+            </li>
+        </ul>
+    </li>
+    <li> This results in the following (for example):
+        <pre class="term"><samp>
+ICP fitness: 1.0 RMSE: 0.010631891033362824
+T_sensor_to_scene:
+ [[ 9.99930746e-01 -4.64087563e-03  1.08151039e-02 -8.72929755e-04]
+ [ 4.43469507e-03  9.99809444e-01  1.90107587e-02  2.17824679e-03]
+ [-1.09012695e-02 -1.89614804e-02  9.99760784e-01  5.88481766e-03]
+ [ 0.00000000e+00  0.00000000e+00  0.00000000e+00  1.00000000e+00]]
+xyz/rpy: [-0.00087293  0.00217825  0.00588482] [-0.01896374  0.01090149  0.00443497]
+        </samp></pre>
+    </li>
+    <li> Update the <i>real robot</i> xacro file:
+        <pre class="term"><samp>
+&lt;!-- camera calibration joint --&gt;
+&lt;joint name="d435_calibration_joint" type="fixed"&gt;
+	&lt;origin xyz="-0.00087293  0.00217825  0.00588482" rpy="-0.01896374  0.01090149  0.00443497"/&gt;
+    &lt;parent link="camera_pre_link"/&gt;
+    &lt;child link="camera_link"/&gt;
+&lt;/joint>
+        </samp></pre>
+    </li>
+        <li> The sim robot xacro file does not change:
+        <pre class="term"><samp>
+&lt;!-- camera calibration joint --&gt;
+&lt;joint name="d435_calibration_joint" type="fixed"&gt;
+	&lt;origin xyz=0 0 0" rpy="0 0 0"/&gt;
+    &lt;parent link="camera_pre_link"/&gt;
+    &lt;child link="camera_link"/&gt;
+&lt;/joint>
+        </samp></pre>
+    </li>
+</ul>
+
+<p>The above calibration process also works if I offset the camera housing (to the left, for example) in the shared part of the robot and simulated xacro file. As well, the process will also work if I do not offset the real camera to the left of center (as I have done - see figure 19). I have decided to offset the real camera so that it produces a more left-right symmetrical depth FOV - however, it still provides more depth points on the left (see figure 18). The results of the calibration process are shown in the following 4 figures.</p>
+
+<figure class="mmd-figure">
+<img src="real_robot_calibration_snapshot.jpg"
+     alt="real_robot_calibration_snapshot" width="500">
+    <figcaption class="mmd-caption">Fig 15: The real calibration scene.</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+<img src="robot_calibration_snapshot.png"
+     alt="robot_calibration_snapshot" width="500">
+    <figcaption class="mmd-caption">Fig 16: The simulated calibration scene.</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+<img src="robot_calibration_pcd_raw.png"
+     alt="robot_calibration_pcd_raw" width="500">
+    <figcaption class="mmd-caption">Fig 17: Raw point clouds (before calibration).</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+<img src="robot_calibration_pcd_cal.png"
+     alt="robot_calibration_pcd_cal" width="500">
+    <figcaption class="mmd-caption">Fig 18: Calibrated point clouds.</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+<img src="real_robot_calibrated.jpg"
+     alt="real_robot_calibrated" width="500">
+    <figcaption class="mmd-caption">Fig 19: The real robot after calibration and camera repositioning. The centerline of the robot is the right side of the yellow tape on the robot chassis.</figcaption>
+</figure>
+
+<h2>Exploration and Navigation</h2>
+
+<h3>Exploration and Navigation: Algorithm overview</h3>
+
+<p>The computation graphs for the real and simulated robot are shown in figures 20 and 21. These are constructed automatically via <code>rqt</code> from a running ros2 SW stack. Click on them and pan and zoom away. </p>
+
+<figure class = "figure">
+    <a href="rosgraph.svg" data-svg="rosgraph.svg">
+    <img src="rosgraph.svg" alt="ROS Graph thumbnail" width="400"> </a>
+    <figcaption class="mmd-caption">Fig 20: Real robot computation graph (navigable SVG).</figcaption>
+</figure>
+
+<p>The detail in these graphs (figures 20 and 21) is pretty challenging to digest, but becomes increasingly useful as you tune up your SW stack to the goals at hand. Zoomed-in parts of this computation graph are shown below.</p>
+
+<figure class = "figure">
+    <a href="rosgraph_sim.svg" data-svg="rosgraph_sim.svg">
+    <img src="rosgraph_sim.svg" alt="ROS Graph thumbnail" width="400"> </a>
+    <figcaption class="mmd-caption">Fig 21: Simulated robot computation graph (navigable SVG).</figcaption>
+</figure>
+
+<p>In order to attain the project goals, I have used a custom autonomous frontier exploration implementation<a href="https://github.com/StuartGJohnson/frontier_explorer"> Frontier exploration</a>. While there are many similar frontier exploration packages out there, many of them depend on an initial exploration of the environment by a human (tele)operator. This is not allowed by the project goals. The <code>explore_lite</code> node is an example of this - while it doesn't strictly demand initial human exploration, this node implicitly assumes that it makes sense to characterize frontier areas by their centroids. Well, what if you start out in a uniformly unknown environment? You are at the centroid of the frontier already!</p>
+
+<p>The <code>frontier_explorer</code> node depends on <a href="https://docs.nav2.org">Nav2</a> to interact with the environment as the <code>frontier_explorer</code> generates and attempts goals. Nav2 is a complex SW stack with many interacting components. A Nav2-based project involves selecting, assembling and tuning navigation algorithms. Some algorithms may eventually yield better results, but are more challenging to tune. The simplified diagram below (figure 22) attempts to represent Nav2 operation for the purposes of this project. </p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart TD
+      A["rtabmap (SLAM)"] --> B["octomap_grid"]
+      A --> TF1["map --> odom"]
+      OD["/odom"] --> TF2["odom --> base_link"]
+      TF1 --> TF["/tf"]
+      TF2 --> TF
+      TF --> GC
+      B --> GCS
+      D["/scan"] --> GCVG
+      E["/camera/cloud"] --> GCVG
+      subgraph GC["Nav2 global_costmap"]
+         GCS["static_layer"]
+         GCVG["voxel_layer"]
+         GCS --> GCI["inflation_layer"]
+         GCVG --> GCI
+      end
+      FE["frontier_explorer"] --> G
+      G["Goal"] --> NPP
+      GCI -->|2D map| NPP["Nav2 Grid Based Path Planner"]
+      NPP --> T["path to goal"]
+      TF --> LC
+      D["/scan"] --> LCVG
+      E["/camera/cloud"] --> LCVG
+      subgraph LC["Nav2 local_costmap"]
+         LCVG["voxel_layer"]
+         LCVG --> LCI["inflation_layer"]
+      end
+      T --> NP
+      LCI --> |2D map| NP["Nav2 Controller:\nRotation Shim Controller +\nRegulated Pure Pursuit"]
+      NP --> VS["Nav2 Velocity Smoother"]
+      VS --> CV["/cmd_vel (robot)"]
+    </pre>
+    <figcaption class="mmd-caption">Fig 22: Nav2 at work.</figcaption>
+</figure>
+
+<p><code>frontier_explorer</code> generates goals for Nav2 until the frontiers in the map are exhausted. Fig 23 shows (roughly) the functionality of <code>frontier_explorer</code>. </p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart TD
+      A["rtabmap (SLAM)"] --> B["/map"]
+      B --> F["frontier_explorer"]
+      F --> G["goals"] --> N2["Nav2 Planner"]
+      G -.-> RV["rviz2"]
+      F --> H["blacklisted regions"] -.-> RV
+      F --> I["frontier regions"] -.-> RV
+    </pre>
+    <figcaption class="mmd-caption">Fig 23: <code>frontier_explorer</code> at work. Rviz2 may not be running on the same host (i.e, the (real) robot).</figcaption>
+</figure>
+
+<p>Figure 23 also shows the production of map overlays (goals, blacklisted regions and frontier regions) which are displayed via rviz2 (generally on a non-robot host on the LAN). These products (as well as Nav2 Rviz2 products) are shown in the exploration movies in the results section below. </p>
+
+<h3>Exploration and Navigation: Algorithm tuning</h3>
+
+<p>There are a lot of parameters and configurations involved in a functioning exploration SW stack. There are 3 principal components to be tuned: <code>frontier_explorer, rtabmap and Nav2 </code>. Nav2 tuning includes the Nav2 planner, the Nav2 controller, and the Nav2 behavior tree (BT). The exact settings for these are included in the files in the parent github repo: </p>
+
+<ul> Settings files
+    <li>frontier_explorer (the defaults were used). See <a href="https://github.com/StuartGJohnson/frontier_explorer/blob/master/src/frontier_explorer.cpp">frontier_explorer.cpp</a>
+    </li>
+    <li>Nav2
+        <ul>
+            <li><a href="https://github.com/StuartGJohnson/ugv_ws/docs/nav2_rtabmap_sim_params.yaml">sim</a></li>
+            <li><a href="https://github.com/StuartGJohnson/ugv_ws/docs/nav2_rtabmap_params.yaml">real</a></li>
+        </ul>
+    </li>
+    <li>rtabmap
+        <ul>
+            <li><a href="https://github.com/StuartGJohnson/ugv_ws/docs/redacted_bringup_rtabmap_sim.launch.py">sim</a></li>
+            <li><a href="https://github.com/StuartGJohnson/ugv_ws/docs/redacted_bringup_rtabmap.launch.py">real</a></li>
+
+        </ul>
+    </li>
+</ul>
+
+<p>Some explanation and general discussion of these configuration files is called for:</p>
+
+<ul>
+    <li><code>frontier_explorer</code> has numerous numerical and behavior settings
+        <ul>
+            <li>plan_period and replan_cooldown should be set to prevent oscillatory behavior as the map evolves quickly. In fact, the main enemy of effective exploration is an excessively aggressive replan schedule.</li>
+            <li>The code - with current settings - prechecks possible goals by 1) checking if the goal is within the same connected region of unoccupied map cells as the robot, and 2) asking Nav2 if the goal is reachable. It's not entirely clear that these are good ideas if we have a map which is changing and possibly in error during exploration (due to poor loop closure in rtabmap, say). Relevant settings are: use_connectivity_filter and precheck_current_goal_on_map_update. </li>
+        </ul>
+    </li>
+    <li>rtabmap is used to build a 3D model of the environment with the settings given.
+        <ul>
+            <li>In order to produce 2D map products for Nav2 and frontier_explorer, obstacle/ground heights need to be set. These settings are redundant with Nav2 costmap settings.</li>
+            <li>Grid/Sensor, Reg/Strategy and the subscribe_* settings need to be coordinated and set with care </li>
+        </ul>
+    <li>Nav2 local costmap. The local costmap should reflect recent, nearby obstacles. Notes:
+        <ul>
+            <li>Setting indentation in the files is critical. Settings at the wrong indent are silently ignored.</li>
+            <li>For <em>each data source</em>, <code>observation_persistence</code> (in seconds) should be non-zero, but not too large. Large values will cause errors as Nav2 attempts to process objects outside the local map. Without <code>observation_persistence</code>, the planner forgets obstacles outside of the field of view of the sensors immediately! This makes it a challenge for navigation in tight spots - or even near obstacles. Detailed nearby obstacle information is only available in the field of view of the depth camera - a modest-sized patch of ground immediately in front of the robot. Considerations for the global costmap are a bit different (read on).</li>
+            <li>For inputs to the (3D) VoxelLayer, each data source should have its z-range specified carefully. For example, the 2D lidar should not generally clear obstacles from the map which have been detected below the 2D lidar height (i.e., by the depth camera).</li>
+            <li> Obstacle height settings are redundant with rtabmap settings. </li>
+        </ul>
+    </li>
+    <li>Nav2 global costmap. The global costmap reflects the accumulating (3d or 2d) occupancy map AND recently observed obstacles. It is important that:
+        <ul>
+            <li>For <em>each data source</em>, <code>observation_persistence</code> (in seconds) should (probably) be larger than for the local costmap (the global costmap is updated much more slowly), however:</li>
+            <li>The long term memory of the global costmap is the selected occupancy map - see the <code>nav2_costmap_2d::StaticLayer</code> incantation.</li>
+            <li>In my case, I want the global costmap to also store low obstacles captured in the depth camera. So, I use rtabmap's 3D->2D octomap_grid as the occupancy map input to the static layer.</li>
+            <li> Obstacle height settings are redundant with rtabmap settings. </li>
+        </ul>
+    </li>
+    <li>Nav2 planner.
+        <ul>
+            <li>The choice of nav2 planner can be the source of much tuning effort. Originally I was using the <code>DWBLocalPlanner</code>. While this planner might be more robust once tuned, I found it to be a challenge to tune it's many parameters. Using the much simpler RegulatedPurePursuitController solved the tuning issues for me. </li>
+            <li>While challenging - and seemingly unnecessary - in simulation, the RotationShimController appears to be useful for navigation in tight spots, since the robot can rotate in place before beginning on a trajectory. But, more experimentation may prove otherwise.</li>
+            <li>The <code>planner_server:GridBased:allow_unknown</code> setting (when false) prevents the route planner from planning routes through unknown map areas. It is quite exciting to see the planner plan a route outside the structure! Umm, don't do that. Oh, and don't forget to close the doors if you want have an indoor exploration project!</li>
+        </ul>
+    </li>
+    <li>Nav2 general tuning challenges
+        <ul>
+            <li>With the full SW stack, in simulation, I had a lot of challenges with timing. I had to introduce various <code>transform_tolerance</code> settings (these are in seconds). Make sure all your components have <code>use_sim_time</code> set to true in simulation (mine all seemed to be). This was an unsatisfactory experience with the full stack in simulation, IMHO. </li>
+        </ul>
+        <ul>It may be useful to look over the (Nav2) algorithm choices for a given component and pick the one with the fewest parameters to tune. Then perhaps work you way back towards more complex (although possibly more robust) solutions.</ul>
+    <li>Nav2 BT</li>
+</ul>
+
+<h3>Exploration and Navigation: Orchestration</h3>
+
+<p>The project goal is achieved by the <code>exploration_orchestrator.py</code>. This script coordinates and documents the exploration episode by interacting with the frontier_explorer and the rviz2 rviz_record plugin. On completion of exploration - while all nodes are still running - it also triggers the collection of a bag file snapshot of interesting quantities via <code>rosbag2_py</code>. Figure 24 shows this functionality when operating the real robot in mobile mode: <p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart TD
+        subgraph R["Robot (Orin)"]
+            F["frontier_explorer"]
+            S["UGV02x nodes"]
+            F <--> S
+        end
+        subgraph E["manager"]
+            RV["rviz2 (rviz_record plugin)"]
+            O["exploration_orchestrator.py"]
+            O --> |"/rviz_record/start\n/rviz_record/stop"| RV
+            RV --> EM["Exploration movie"]
+        end
+        O --> |"/explore"| F
+        F --> |"/exploration_done"| O
+    </pre>
+    <figcaption class="mmd-caption">Fig 24: <code>exploration_orchestrator</code> at work.</figcaption>
+</figure>
+
+<h2>Results</h2>
+
+<h3>Indoor exploration</h3>
+
+<p> Figure 25 shows the results of indoor exploration by the robot. The environment is a bit cluttered with some low-lying (below-the-lidar) items. The robot cautiously discovers all reachable areas.</p>
+
+<figure class="figure">
+    <div class="mp4-mini" data-src="explore_20250915_191609/rviz.mp4" data-speed="8" data-autoplay="true" data-blob="true"></div>
+    <figcaption class="mmd-caption">Fig 25: A movie of indoor exploration. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 28).</figcaption>
+</figure>
+
+<p>While the exploration is for the most part successful, there are some interesting behaviors to be addressed in upcoming projects. First, the lidar-based odometry does seem noisy, with the robot jumping around a bit (say ~2cm magnitude). This may be the reason the robot sometimes moves very hesitantly when trying to skirt around obstacles. An upcoming odometry/sensor fusion project will look into this. Second, there are some strips between floor sections in this indoor environment of roughly 1cm in height. As the robot passes over these, the depth camera sees phantom obstacles - the robot vertical is not corrected for (the floor ahead seems "high" as the robot rocks forward off the strip). This is potentially addressable via the on-board (camera and robot) IMUs, although Nav2 did not decide to make this phantom obstacle permanent - it cleared almost immediately as the robot ran on the flat floor after crossing the strip. This sort of thing will really become important on natural outdoor terrain. Finally, the map is fairly well constructed, although loop closure is clearly a challenge for rtabmap in various areas - with multiple images of walls appearing. This indoor environment is roughly U-shaped, and the arms of the U are distorted. But the basic connectivity of the open space is preserved. </p>
+
+<h3>Exploration of the simulated scene</h3>
+
+<p> Figure 26 shows exploration of the simulated scene. The simulated scene is rectangular with cylindrical obstacles of various radii (see figure 6). </p>
+
+<figure class="figure">
+<div class="mp4-mini" data-src="explore_20250916_142838/rviz.mp4" data-speed="8" data-autoplay="true" data-blob="true"></div>
+    <figcaption class="mmd-caption">Fig 26: A movie of exploration of the simulated scene. The map follows the standard Nav2 rviz format, with some additions by the frontier_explorer. Dark gray is unknown, light gray is unoccupied space, green is frontier, blue circles are blacklisted (unreachable) goals and black is the map (occupied space). The occupied space map (from rtabmap) used is the 2D projection of the 3D occupancy grid (see figure 20).</figcaption>
+</figure>
+
+<p>This exploration shows that the robot can explore tight spaces and deal with obstacles only visible in the depth camera - it is quite adaptable with path replanning. Note that rtabmap has had significant issues with loop closure. For this combination of sensors and scene, it's possible a different SLAM algorithm would be better. The features in a simulated scene can be less rich - for this purpose I added the floor texture. But the primary problem for rtabmap may be the preponderance of flat floor in the depth map from the camera. </p>
+
+<h3>Other interesting exploration products: real robot/indoors</h3>
+
+<p> On completion of mapping, the orchestrator collects a number of 2D and 3D mapping products.
+octomap_grid (figure 27) is the 2d projection of the occupied space (figure 28). </p>
+
+<figure class="figure">
+<img src="explore_20250915_191609/octomap_grid.png"
+     alt="octomap_grid" width="500">
+    <figcaption class="mmd-caption">Fig 27: Final mapping product: 2D.</figcaption>
+</figure>
+
+<p>Figure 28 is the final point cloud collected over the course of robot exploration. If you look carefully, there is some imaged clutter and imaging of the lower extremities of things. Figure 28 can be manipulated extensively via pan and zoom. Note there are several clusters of points at negative Z. Presumably the depth camera is still generating artifacts.</p>
+
+<figure class="figure">
+  <div class="pcd-card">
+    <div class="pcd-title">octomap_occupied_space</div>
+    <div class="pcd-view pcd-viewer"
+         data-src="explore_20250915_191609/octomap_occupied_space.pcd"
+         data-point-size=".01"
+         data-grid="true"
+         data-axes="true"
+         data-bg="#0b0e12">
+    </div>
+  </div>
+    <figcaption class="mmd-caption">Fig 28: Final mapping product: 3D.</figcaption>
+</figure>
+
+<h3>Other interesting exploration products: simulated robot/scene</h3>
+
+<figure class="figure">
+<img src="explore_20250916_142838/map.png"
+     alt="map" width="500">
+    <figcaption class="mmd-caption">Fig 29: Final mapping product: 2D.</figcaption>
+</figure>
+
+<h2>Big picture Lessons learned</h2>
+
+<ul>
+    <li>Depth cameras can generate bad point clouds when viewing "shiny" floor at a low angle. For this project, many phantom obstacles were detected (indoors). While one can mitigate this issue to a large degree by tilting the camera down (30 degrees in my case), this has other effects. For example, rtabmap complains that it's ICP step is having issues with point clouds in open floor areas - robot turns can be poorly tracked by rtabmap. If the camera were pointing forward, it might have a rich(er) 3D environment in view.  </li>
+    <li>Skid-steer robots are a challenge:
+        <ul>
+            <li>Subtle interactions occur between the tires and the ground when turning - the wheels must slip sideways for the robot to turn.</li>
+            <li>This is a challenge to model in simulation.</li>
+            <li>The relationship between wheel encoders and true (or even useful) odometry is complex and terrain dependent.</li>
+        </ul>
+    </li>
+    <li>Do not assume that your (custom) ROS2 robot will work out of the box. You are embarking on a voyage of experimentation.</li>
+    <li>If you find a particular ROS2 component is difficult to tune, downgrade to a simpler component and try that.</li>
+    <li>Every SW or HW component is a learning experience of possibly great depth - especially when it is not working!</li>
+    <li>Many things in ROS2 fail silently, especially in the vicinity of parameter settings. Some dev process needs to be brought to bear here.</li>
+    <li>QoS settings for ROS2 topics are still a bit mysterious to me. I think this may be to blame for some behavior quirks, like missing output after exploration in simulation.</li>
+    <li>Calibrate all sensors for their position on the robot.</li>
+    <li>The ROS2 Nav2 stack on my robot turned out to be quite safe - perhaps overly safe. I have not damaged any parts (yet).</li>
+    <li>Your favorite GPT(s) can accelerate code development, but it is a chore to iterate on development and debugging with them. During code development, GTP4 and GPT5(better!) could be rather frustrating when coding to APIs - which is most of the time (I do NOT want to re-write any code if possible!). But, we still have to get used to each other! </li>
+</ul>
+
+<h2>Next steps</h2>
+<ul>
+    <li>A 3d lidar! (e.g. VLP16).</li>
+    <li>Plumb the depths of odometry by sensor fusion for this robot.</li>
+    <li>Define metrics for exploration performance.</li>
+    <li>Explore more scenes.</li>
+    <li>Go outside.</li>
+</ul>
+
+</main>
+
+
+
+<!-- Lightbox viewer -->
+<div id="svgLightbox" aria-modal="true" role="dialog">
+    <div id="svgToolbar">
+        <button id="svgZoomIn">＋</button>
+        <button id="svgZoomOut">－</button>
+        <button id="svgFit">Fit</button>
+        <button id="svgReset">Reset</button>
+    </div>
+    <button id="svgClose" title="Close (Esc)">✕</button>
+    <div id="svgStage" aria-live="polite"></div>
+    <div id="svgStatus">Ready</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+
+  // Ensure TOC can receive focus when returning via Back
+  if (!toc.hasAttribute('tabindex')) toc.setAttribute('tabindex', '-1');
+
+  // Use <main> if present; otherwise scan the whole body
+  const scope = document.querySelector('main') || document.body;
+  const headings = Array.from(scope.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+  if (!headings.length) { toc.textContent = '(no headings found)'; return; }
+
+  // Ensure unique IDs on headings
+  const slug = s => s.toLowerCase().trim().replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-') || 'section';
+  const seen = new Set();
+  for (const h of headings) {
+    if (!h.id) h.id = slug(h.textContent);
+    const base = h.id; let i = 1;
+    while (seen.has(h.id)) h.id = `${base}-${i++}`;
+    seen.add(h.id);
+  }
+
+  // Build nested list by heading level (no stray first bullet)
+  const root = document.createElement('ul');
+  let currentLevel = parseInt(headings[0].tagName.slice(1), 10);
+  const stack = [{ level: currentLevel - 1, ul: root }];
+
+  const pushList = level => {
+    const ul = document.createElement('ul');
+    const parentUL = stack[stack.length - 1].ul;
+    const lastLI = parentUL.lastElementChild;
+    (lastLI || parentUL).appendChild(ul);
+    stack.push({ level, ul });
+  };
+  const popList = () => { stack.pop(); };
+
+  for (const h of headings) {
+    const level = parseInt(h.tagName.slice(1), 10);
+    while (level > stack[stack.length - 1].level + 1) pushList(stack[stack.length - 1].level + 1);
+    while (level < stack[stack.length - 1].level) popList();
+    if (level > stack[stack.length - 1].level) pushList(level);
+
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = `#${h.id}`;
+    a.textContent = h.textContent.trim();
+    a.className = `lvl-${level}`;
+    li.appendChild(a);
+    stack[stack.length - 1].ul.appendChild(li);
+  }
+
+  toc.textContent = '';
+  toc.appendChild(root);
+
+  // Instant jump + Back goes to TOC first
+  toc.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+
+    const id = a.getAttribute('href').slice(1);
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    if (location.hash !== '#toc') history.pushState({ at: 'toc' }, '', '#toc'); // waypoint
+    history.pushState({ at: 'section', id }, '', '#' + id);
+
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    target.focus({ preventScroll: true });
+  });
+
+  window.addEventListener('popstate', () => {
+    if (location.hash === '#toc') {
+      toc.scrollIntoView({ behavior: 'auto', block: 'start' });
+      toc.focus({ preventScroll: true });
+    }
+  });
+});
+</script>
+
+<script>
+    (function () {
+        const lb = document.getElementById('svgLightbox');
+        const stage = document.getElementById('svgStage');
+        const statusEl = document.getElementById('svgStatus');
+        let panzoom = null, origViewBox = null;
+
+        const setStatus = t => statusEl.textContent = t;
+
+        async function openSvg(src, hrefFallback) {
+            if (panzoom) {
+                panzoom.destroy();
+                panzoom = null;
+            }
+            stage.innerHTML = '';
+            lb.style.display = 'block';
+            setStatus('Loading… ' + src);
+
+            try {
+                const res = await fetch(src, {cache: 'no-store'});
+                if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+                const text = await res.text();
+                const dom = new DOMParser().parseFromString(text, 'image/svg+xml');
+                let svg = dom.documentElement;
+                if (!svg || svg.tagName.toLowerCase() !== 'svg') throw new Error('Not an SVG');
+
+                // Ensure viewBox exists so pan/zoom works
+                if (!svg.getAttribute('viewBox')) {
+                    const w = parseFloat(svg.getAttribute('width')) || 1000;
+                    const h = parseFloat(svg.getAttribute('height')) || 1000;
+                    svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+                }
+                origViewBox = svg.getAttribute('viewBox');
+                svg.setAttribute('width', '100%');
+                svg.setAttribute('height', '100%');
+                svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+                stage.appendChild(svg);
+
+                panzoom = svgPanZoom(svg, {
+                    controlIconsEnabled: false,
+                    fit: true, center: true,
+                    minZoom: 0.01, maxZoom: 200,
+                    zoomScaleSensitivity: 0.3
+                });
+                panzoom.resize();
+                panzoom.fit();
+                panzoom.center();
+                setStatus('Loaded: ' + src);
+            } catch (err) {
+                // Fallback: open the raw SVG (e.g., if testing via file://)
+                lb.style.display = 'none';
+                if (hrefFallback) window.open(hrefFallback, '_blank');
+                else alert('Failed to load: ' + src + '\nTip: serve with: python3 -m http.server');
+            }
+        }
+
+        function closeSvg() {
+            if (panzoom) {
+                panzoom.destroy();
+                panzoom = null;
+            }
+            stage.innerHTML = '';
+            lb.style.display = 'none';
+        }
+
+        // Toolbar
+        document.getElementById('svgZoomIn').onclick = () => panzoom && panzoom.zoomIn();
+        document.getElementById('svgZoomOut').onclick = () => panzoom && panzoom.zoomOut();
+        document.getElementById('svgFit').onclick = () => panzoom && (panzoom.fit(), panzoom.center());
+        document.getElementById('svgReset').onclick = () => {
+            if (!panzoom) return;
+            const svg = stage.querySelector('svg');
+            if (svg && origViewBox) svg.setAttribute('viewBox', origViewBox);
+            panzoom.resetZoom();
+            panzoom.resetPan();
+            panzoom.fit();
+            panzoom.center();
+        };
+        document.getElementById('svgClose').onclick = closeSvg;
+
+        // Click backdrop (outside stage/toolbar/close) to close
+        lb.addEventListener('click', (e) => {
+            const inStage = e.target.closest('#svgStage');
+            const inToolbar = e.target.closest('#svgToolbar');
+            const isClose = e.target.closest('#svgClose');
+            if (!inStage && !inToolbar && !isClose) closeSvg();
+        });
+
+        // Esc (or X) to close
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.key.toLowerCase() === 'x') closeSvg();
+        });
+
+        // Delegate clicks: any element with data-svg opens the viewer
+        document.addEventListener('click', (e) => {
+            const a = e.target.closest('[data-svg]');
+            if (!a) return;
+            e.preventDefault();
+            openSvg(a.getAttribute('data-svg'), a.getAttribute('href'));
+        });
+    })();
+</script>
+
+<script>
+(function(){
+  async function toBlobURL(url){
+    // same-origin (or CORS-enabled) MP4
+    const res = await fetch(url, { cache: 'force-cache' });
+    const buf = await res.arrayBuffer();
+    return URL.createObjectURL(new Blob([buf], { type: 'video/mp4' }));
+  }
+
+  function clampSpeed(v){ v = Number(v)||1; return Math.min(32, Math.max(0.1, v)); }
+
+  function buildPlayer(container){
+    const src      = container.dataset.src;
+    const auto     = String(container.dataset.autoplay || 'true') === 'true';
+    const useBlob  = String(container.dataset.blob     || 'true') === 'true';
+    const startSpd = clampSpeed(container.dataset.speed ?? 8);
+
+    const wrap = document.createElement('div'); wrap.className = 'mp4-mini-wrap';
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.playsInline = true;
+    video.muted = true;
+    wrap.appendChild(video);
+
+    const controls = document.createElement('div'); controls.className = 'mp4-mini-controls';
+    const btnPlay  = document.createElement('button'); btnPlay.textContent = 'Pause';
+    const btnReset = document.createElement('button'); btnReset.textContent = 'Reset ⟲';
+    const speedBox = document.createElement('span');  speedBox.className = 'mp4-mini-speed';
+    const speedLbl = document.createElement('span');  speedLbl.textContent = 'Speed×';
+    const speedInp = Object.assign(document.createElement('input'), {type:'number', min:0.1, max:32, step:0.1, value:startSpd});
+    speedBox.append(speedLbl, speedInp);
+    const spacer = document.createElement('span'); spacer.className = 'spacer';
+    const hint = Object.assign(document.createElement('span'), {style:'opacity:.7', textContent:'autoplay is muted'});
+    controls.append(btnPlay, btnReset, speedBox, spacer, hint);
+
+    container.innerHTML = ''; container.append(wrap, controls);
+
+    function applySpeed(v){
+      const rate = clampSpeed(v);
+      video.defaultPlaybackRate = rate; // persist across plays
+      video.playbackRate = rate;        // take effect now
+      speedInp.value = rate;
+    }
+
+    // source setup (Blob keeps seeks local; avoids BrokenPipe spam)
+    (useBlob ? toBlobURL(src) : Promise.resolve(src))
+      .then(u => {
+        video.src = u;
+        if (auto) video.play().catch(()=>{ /* gesture required if unmuted */ });
+      });
+
+    // controls
+    btnPlay.onclick  = async ()=>{ if (video.paused) { await video.play().catch(()=>{}); } else video.pause(); };
+    btnReset.onclick = async ()=>{
+      const wasPlaying = !video.paused;
+      video.pause();
+      video.currentTime = 0;
+      if (wasPlaying) await video.play().catch(()=>{});
+    };
+    speedInp.onchange = ()=> applySpeed(speedInp.value);
+
+    // keep speed sticky across load/play events
+    video.addEventListener('loadedmetadata', ()=> applySpeed(speedInp.value || startSpd));
+    video.addEventListener('play',           ()=> applySpeed(speedInp.value || startSpd));
+    video.addEventListener('play', ()=> btnPlay.textContent = 'Pause');
+    video.addEventListener('pause',()=> btnPlay.textContent = 'Play');
+
+    // initial
+    applySpeed(startSpd);
+  }
+
+  function init(){ document.querySelectorAll('.mp4-mini').forEach(buildPlayer); }
+  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', init) : init();
+})();
+</script>
+
+<script>
+(function(){
+  function hexToColor4(hex, a=1){
+    // hex like "#0b0c10"
+    const c = BABYLON.Color3.FromHexString(hex);
+    return new BABYLON.Color4(c.r, c.g, c.b, a);
+  }
+
+  function frameCamera(cam, meshes){
+    const min = new BABYLON.Vector3(+Infinity, +Infinity, +Infinity);
+    const max = new BABYLON.Vector3(-Infinity, -Infinity, -Infinity);
+    meshes.forEach(m=>{
+      const bi = m.getBoundingInfo?.(); if(!bi) return;
+      min.minimizeInPlace(bi.boundingBox.minimumWorld);
+      max.maximizeInPlace(bi.boundingBox.maximumWorld);
+    });
+    const center = min.add(max).scale(0.5);
+    const size   = max.subtract(min);
+    const maxDim = Math.max(size.x, size.y, size.z) || 1.0;
+
+    cam.setTarget(center);
+    cam.radius = Math.max(maxDim * 1.3, 0.001);
+
+    // near/far tuned to radius for stable depth precision
+    //const near = Math.max(1e-4, cam.radius / 2000);
+    //const far  = Math.max(10.0, cam.radius * 2000);
+    const near = Math.max(1e-2, cam.radius / 100);
+    const far  = Math.max(100.0, cam.radius * 100);
+    cam.minZ = near; cam.maxZ = far;
+
+    cam.lowerRadiusLimit = maxDim * 0.05;
+    cam.upperRadiusLimit = maxDim * 50.0;
+  }
+
+  function bootViewer(container){
+    const src   = container.dataset.src;              // required
+    const bg    = container.dataset.bg || '#0b0c10';  // optional hex
+    const spin  = (container.dataset.autospin === 'true'); // optional
+
+    // Canvas + status
+    const canvas = document.createElement('canvas');
+    canvas.className = 'glb-canvas';
+    // Own the mouse wheel while hovering the canvas
+    canvas.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        }, { passive: false });
+    const status = document.createElement('div');
+    status.className = 'glb-status';
+    status.textContent = 'Loading…';
+    container.append(canvas, status);
+
+    // Engine/Scene
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer:true, stencil:true });
+    const scene  = new BABYLON.Scene(engine);
+    scene.clearColor = hexToColor4(bg, 1);
+
+    // Camera
+    const cam = new BABYLON.ArcRotateCamera("cam",
+      -Math.PI/4, Math.PI/3, 3.0,
+      BABYLON.Vector3.Zero(), scene);
+    cam.lowerBetaLimit = 0.03;
+    cam.upperBetaLimit = Math.PI - 0.03;
+    cam.wheelDeltaPercentage = 0.02;
+    cam.panningSensibility = 800;
+    cam.useBouncingBehavior = true;
+    cam.attachControl(canvas, true);
+
+    // Lights
+    const hemi = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0,1,0), scene);
+    hemi.intensity = 0.7;
+    const dir = new BABYLON.DirectionalLight("dir", new BABYLON.Vector3(-0.5,-1,-0.6), scene);
+    dir.position = new BABYLON.Vector3(5,10,7);
+    dir.intensity = 1.1;
+
+    // Fallback cube (so the viewer is never blank)
+    const fallback = BABYLON.MeshBuilder.CreateBox("fallback",{width:1,height:0.3,depth:0.6},scene);
+    const fbMat = new BABYLON.StandardMaterial("fbMat", scene);
+    fbMat.diffuseColor = new BABYLON.Color3(0.30,0.78,0.31);
+    fbMat.specularColor = new BABYLON.Color3(0,0,0);
+    fallback.material = fbMat;
+    fallback.setEnabled(true);
+
+    // Render loop
+    engine.runRenderLoop(()=> {
+      if (spin) { cam.alpha += 0.002; } // gentle auto-rotate if requested
+      scene.render();
+    });
+
+    // Resize to container (not just window)
+    const ro = new ResizeObserver(()=> engine.resize());
+    ro.observe(container);
+    window.addEventListener('resize', ()=> engine.resize());
+
+    // Cleanup if the element is removed
+    const mo = new MutationObserver((list)=>{
+      list.forEach(rec=>{
+        rec.removedNodes && rec.removedNodes.forEach(n=>{
+          if (n === container) {
+            try { ro.disconnect(); mo.disconnect(); engine.dispose(); } catch {}
+          }
+        });
+      });
+    });
+    mo.observe(container.parentNode || document.body, { childList:true });
+
+    // Progress helpers
+    const set = (...a)=>{ status.textContent = a.join(' '); console.log(...a); };
+    const add = (...a)=>{ status.textContent += '\n' + a.join(' '); console.log(...a); };
+
+    // Load GLB
+    if (!src) { set('No data-src on .glb-viewer'); return; }
+    set('Loading…', src);
+    BABYLON.SceneLoader.Append(
+      "", src + (src.includes('?') ? '&' : '?') + 'v=' + Date.now(),
+      scene,
+      () => {
+        const meshes = scene.meshes.filter(m => m !== fallback);
+        if (meshes.length) {
+          fallback.setEnabled(false);
+          frameCamera(cam, meshes);
+          set('Loaded:', src);
+        } else {
+          add('Loaded but found 0 meshes; showing fallback.');
+          frameCamera(cam, [fallback]);
+        }
+      },
+      (evt) => {
+        if (evt.lengthComputable) set(`Loading ${src} — ${(evt.loaded/evt.total*100).toFixed(1)}%`);
+        else set(`Loading ${src} — ${Math.round(evt.loaded/1024)} kB`);
+      },
+      (scene, message, exception) => {
+        console.error('GLB load error:', message, exception);
+        set('ERROR:', message);
+        add('Showing fallback cube. Check filename/path & case.');
+        frameCamera(cam, [fallback]);
+      }
+    );
+  }
+
+  function initAll(){
+    document.querySelectorAll('.glb-viewer[data-src]').forEach(bootViewer);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+})();
+</script>
+
+<script>
+(function(){
+  function tighten(el){
+    const svg = el.querySelector('svg');
+    if (!svg) return;
+
+    // Remove Mermaid's 100% styles/attrs if present
+    svg.style.width = ''; svg.style.height = '';
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.style.maxWidth = 'none';
+
+    // Compute intrinsic size from viewBox or geometry
+    let w = 300, h = 150;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width && vb.height) {
+      w = vb.width; h = vb.height;
+    } else {
+      const bbox = svg.getBBox();
+      w = bbox.width || w; h = bbox.height || h;
+    }
+
+    // Optional per-diagram scale: <pre class="mmd" data-mmd-scale="0.9">
+    const scale = parseFloat(el.dataset.mmdScale || '1') || 1;
+    svg.style.width  = (w * scale) + 'px';
+    svg.style.height = (h * scale) + 'px';
+
+    // Now show it
+    el.style.visibility = 'visible';
+  }
+
+  function tightenAll(){
+    document.querySelectorAll('.mmd[data-processed="true"]').forEach(tighten);
+  }
+
+  function bootMermaid(){
+    if (!window.mermaid) return;
+
+    const theme = document.documentElement.dataset.mmdTheme || 'dark';
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme,
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif'
+    });
+
+    // Render all, then tighten on next tick
+    mermaid.run({ querySelector: '.mmd' });
+    // Schedule a couple passes in case layout/fonts load late
+    requestAnimationFrame(tightenAll);
+    setTimeout(tightenAll, 0);
+    setTimeout(tightenAll, 50);
+  }
+
+  // Public API if you inject diagrams later
+  window.renderMermaid = function(){
+    if (!window.mermaid) return;
+    mermaid.run({ querySelector: '.mmd:not([data-processed])' });
+    requestAnimationFrame(tightenAll);
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootMermaid);
+  } else {
+    bootMermaid();
+  }
+})();
+</script>
+
+<script>
+(function(){
+  // ---- Dark theme prelude (inserted at top of each DOT) ----
+  const DARK_THEME = `
+    // global
+    bgcolor="transparent";
+    fontcolor="#e5eef5";
+    fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif";
+    // nodes
+    node [
+      shape=box,
+      style="filled,rounded",
+      fillcolor="#0b1220",
+      color="#334155",
+      fontcolor="#e5eef5",
+      fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif",
+      margin="0.07,0.05"
+    ];
+    // edges
+    edge [
+      color="#94a3b8",
+      fontcolor="#cbd5e1",
+      fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif",
+      arrowsize=0.8
+    ];
+  `;
+
+  function injectTheme(dot, theme){
+    if (!theme || theme === 'none') return dot; // no theming
+    const prelude = (theme === 'dark') ? DARK_THEME : '';
+    if (!prelude) return dot;
+
+    // Insert right after the opening '{' of the graph/digraph
+    // so that any user-defined attributes later in the DOT override these defaults.
+    return dot.replace(/(\b(?:di)?graph\b[^{}]*\{)/i, `$1\n${prelude}\n`);
+  }
+
+  async function renderOne(el){
+    const gv = await window.__graphvizPromise;
+    const engine = (el.dataset.engine || 'dot').toLowerCase();   // dot|neato|fdp|...
+    const theme  = (el.dataset.theme  || 'dark').toLowerCase();  // 'dark' | 'none'
+    let dot = '';
+
+    if (el.tagName === 'PRE') {
+      dot = el.textContent.trim();
+    } else if (el.dataset.src) {
+      const res = await fetch(el.dataset.src);
+      dot = await res.text();
+    } else {
+      dot = el.textContent.trim();
+    }
+
+    // Apply theme prelude then render
+    const themed = injectTheme(dot, theme);
+    const svg = gv.layout(themed, "svg", engine);
+    el.innerHTML = svg;
+    el.setAttribute('data-rendered', 'true');   // <— reveal now
+
+    // Optional uniform downscale per graph
+    const scale = parseFloat(el.dataset.scale || '1');
+    if (scale && scale !== 1) {
+      const svgEl = el.querySelector('svg');
+      if (svgEl) { svgEl.style.transform = `scale(${scale})`; svgEl.style.transformOrigin = 'top left'; }
+    }
+  }
+
+  async function renderAll(){
+    const nodes = document.querySelectorAll('.dot');
+    for (const n of nodes) {
+      try { await renderOne(n); } catch (e) { console.error('DOT render error', e); }
+    }
+  }
+
+  window.renderDotGraphs = renderAll;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderAll);
+  } else {
+    renderAll();
+  }
+})();
+</script>
+
+
+</body>
+</html>
+

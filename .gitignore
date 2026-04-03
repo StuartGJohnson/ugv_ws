@@ -3,7 +3,7 @@ install/
 log/
 *.log
 maps/
-explore_*/
+/explore_*/
 rosbag*/
 bags/
 .idea/
@@ -11,6 +11,6 @@ __pycache__/
 .vscode
 frames*.pdf
 frames*.gv
-rosgraph*
+/rosgraph*
 /trajectory_data_collector
 
