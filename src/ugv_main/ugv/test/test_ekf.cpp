@@ -322,7 +322,7 @@ TEST(EkfReplay, BagCase01)
   std::vector<double> gt_t_zoom(gt_t.begin() + ind_min, gt_t.begin() + ind_max + 1);
   std::vector<double> gt_yaw_zoom(gt_yaw.begin() + ind_min, gt_yaw.begin() + ind_max + 1);
   // plot yaw - much smoother!
-  gp.plot_two_ty(gt_t_zoom,gt_yaw_zoom,ekf_t,ekf_yaw, "GT vs EKF yaw", 1);
+  gp.plot_two_ty(gt_t_zoom,gt_yaw_zoom,ekf_t,ekf_yaw, "GT vs EKF yaw","time(s)","rad", 1);
 
 }
 
@@ -332,7 +332,7 @@ TEST(EkfTest, PlotSomething) {
 
   XY traj = make_sinc_data();
   GnuplotPipe gp;
-  gp.plot_xy(traj.x, traj.y, "EKF x(t)", 0);
+  gp.plot_xy(traj.x, traj.y, "EKF x(t)", "x", "y", 0);
 }
 
 TEST(EkfTest, TestGPTcontention)

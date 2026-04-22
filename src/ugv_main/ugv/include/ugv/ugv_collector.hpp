@@ -30,10 +30,26 @@
 #include <map>
 #include <variant>
 
+#include <vector>
+#include <stdexcept>
+#include <Eigen/Dense>
+
+struct LinearFitResult {
+    double slope;
+    double intercept;
+    std::vector<double> y_fit;
+    std::vector<double> x_fit;
+};
+
+LinearFitResult linear_least_squares_fit(
+    const std::vector<double>& x,
+    const std::vector<double>& y);
+
 struct CmdVel {
     double left_rps;
     double right_rps;
 };
+
 
 struct CmdPID {
     double p;
@@ -42,7 +58,12 @@ struct CmdPID {
     double l;
 };
 
-using Command = std::variant<CmdVel, CmdPID>;
+struct CmdFF {
+    double gain;
+    double offset;
+};
+
+using Command = std::variant<CmdVel, CmdPID, CmdFF>;
 
 class UgvCollector : public rclcpp::Node {
 public:
@@ -50,10 +71,12 @@ public:
     ~UgvCollector();
     
     bool is_complete() const;
-    double last_cmd_rad_per_sec_left() const;
-    double last_cmd_rad_per_sec_right() const;
+    double last_cmd_m_per_sec_left() const;
+    double last_cmd_m_per_sec_right() const;
 
     void plot();
+    void plot_calibrate(const std::vector<double>& v);
+    std::vector<size_t> find_indices(const std::vector<double>& targets, const std::vector<double>& v);
 
 private:
 
@@ -87,10 +110,12 @@ private:
     std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
     // storage (this is a collector!)
-    std::vector<double> enc_rad_per_sec_left;
-    std::vector<double> cmd_rad_per_sec_left;
-    std::vector<double> enc_rad_per_sec_right;
-    std::vector<double> cmd_rad_per_sec_right;
+    std::vector<double> enc_m_per_sec_left;
+    std::vector<double> cmd_m_per_sec_left;
+    std::vector<double> pwm_left;
+    std::vector<double> enc_m_per_sec_right;
+    std::vector<double> cmd_m_per_sec_right;
+    std::vector<double> pwm_right;
     std::vector<double> voltage;
     std::vector<double> time_vec;
 

@@ -18,6 +18,58 @@
 
 #include "ugv/gnuplot.hpp"
 
+LinearFitResult linear_least_squares_fit(
+    const std::vector<double>& x,
+    const std::vector<double>& y)
+{
+    if (x.size() != y.size()) {
+        throw std::runtime_error("x and y must have the same size");
+    }
+
+    const int n = static_cast<int>(x.size());
+
+    Eigen::MatrixXd A(n, 2);
+    Eigen::VectorXd b(n);
+
+    double xmin = std::numeric_limits<double>::infinity();
+    double xmax = -std::numeric_limits<double>::infinity();
+
+    for (int row = 0; row < n; ++row) {
+        A(row, 0) = x[row];
+        A(row, 1) = 1.0;
+        b(row) = y[row];
+        // collect stats
+        xmin = std::min(xmin, x[row]);
+        xmax = std::max(xmax, x[row]);
+    }
+
+    double xrange = xmax-xmin;
+    double dx = xrange/10;
+
+
+    // Solve min ||A * coeff - b||
+    Eigen::Vector2d coeff = A.colPivHouseholderQr().solve(b);
+
+    double slope = coeff(0);
+    double intercept = coeff(1);
+
+    LinearFitResult result;
+    result.slope = slope;
+    result.intercept = intercept;
+
+
+    // Evaluate fitted line over the full x series
+    result.y_fit.resize(2);
+    result.x_fit.resize(2);
+    result.x_fit[0]=xmin-dx;
+    result.x_fit[1]=xmax+dx;
+    for (size_t i = 0; i < result.x_fit.size(); ++i) {
+        result.y_fit[i] = slope * result.x_fit[i] + intercept;
+    }
+
+    return result;
+}
+
 UgvCollector::UgvCollector(std::map<int, Command> commands)
     : rclcpp::Node("ugv_collector"),
       commands_(commands),
@@ -130,11 +182,11 @@ bool UgvCollector::is_complete() const {
     return complete_.load();
 }
 
-double UgvCollector::last_cmd_rad_per_sec_left() const {
+double UgvCollector::last_cmd_m_per_sec_left() const {
     return last_cmd_left_.load();
 }
 
-double UgvCollector::last_cmd_rad_per_sec_right() const {
+double UgvCollector::last_cmd_m_per_sec_right() const {
     return last_cmd_right_.load();
 }
 
@@ -194,6 +246,14 @@ void UgvCollector::command_loop() {
             set_pid_cmd["D"] = this_command.d;
             set_pid_cmd["L"] = this_command.l;
             robot_tools_.send_command(set_pid_cmd);
+        } else if (std::holds_alternative<CmdFF>(cmd)){
+            CmdFF this_command = std::get<CmdFF>(cmd);
+            // pass this on to the robot
+            nlohmann::json cmd_to_send;
+            cmd_to_send["T"] = "43";
+            cmd_to_send["K"] = this_command.gain;
+            cmd_to_send["I"] = this_command.offset;
+            robot_tools_.send_command(cmd_to_send);
         }
 
     }
@@ -234,10 +294,12 @@ void UgvCollector::publish_mag_data(const nlohmann::json &data)
 
 void UgvCollector::publish_odom_data(const nlohmann::json &data)
 {
-  enc_rad_per_sec_left.push_back(data["L"].get<float>());
-  cmd_rad_per_sec_left.push_back(last_cmd_rad_per_sec_left());
-  enc_rad_per_sec_right.push_back(data["R"].get<float>());
-  cmd_rad_per_sec_right.push_back(last_cmd_rad_per_sec_right());
+  enc_m_per_sec_left.push_back(data["L"].get<float>());
+  cmd_m_per_sec_left.push_back(last_cmd_m_per_sec_left());
+  pwm_left.push_back(data["Lp"].get<float>());
+  enc_m_per_sec_right.push_back(data["R"].get<float>());
+  cmd_m_per_sec_right.push_back(last_cmd_m_per_sec_right());
+  pwm_right.push_back(data["Rp"].get<float>());
   voltage.push_back(data["v"].get<float>()/100.0);
   auto msg = std::make_unique<std_msgs::msg::Float32MultiArray>();
   msg->data.push_back(data["L"].get<float>());
@@ -436,12 +498,102 @@ void UgvCollector::plot() {
     fflush(stdout);
 
     // left commands/response plot
-    gp.plot_two_ty(time_vec, cmd_rad_per_sec_left, time_vec, enc_rad_per_sec_left, "left: cmd vs enc", 0, "CMD", "ENC");
+    gp.plot_two_ty(time_vec, cmd_m_per_sec_left, time_vec, enc_m_per_sec_left, "left: cmd vs enc", "time(s)","m/s", 0, "CMD", "ENC");
 
+    gp.plot_xy(enc_m_per_sec_left, pwm_left, "left: pwm vs enc", "m/s","pwm", 3);
 
     // right commands/response plot
-    gp.plot_two_ty(time_vec, cmd_rad_per_sec_right, time_vec, enc_rad_per_sec_right, "right: cmd vs enc", 1, "CMD", "ENC");
+    gp.plot_two_ty(time_vec, cmd_m_per_sec_right, time_vec, enc_m_per_sec_right, "right: cmd vs enc", "time(s)","m/s", 1, "CMD", "ENC");
+
+    gp.plot_xy(enc_m_per_sec_right, pwm_right, "right: pwm vs enc", "m/s","pwm", 4);
 
     // voltage
-    gp.plot_xy(time_vec, voltage,"voltage", 2);
+    gp.plot_xy(time_vec, voltage,"voltage", "time(s)","V", 2);
+}
+
+std::vector<size_t> UgvCollector::find_indices(const std::vector<double>& targets, const std::vector<double>& v) {
+    std::vector<size_t> indices;
+    const double tol = 0.25;
+
+    for (size_t i = 0; i < v.size(); ++i) {
+        for (double t : targets) {
+            if (std::abs(v[i] - t) < tol) {
+                indices.push_back(i);
+                break;
+            }
+        }
+    }
+
+    return indices;
+}
+
+void UgvCollector::plot_calibrate(const std::vector<double>& targets) {
+    // plot results via gnuplot
+    GnuplotPipe gp;
+
+    printf("data collected: %ld \n", time_vec.size());
+    fflush(stdout);
+
+    std::vector<size_t> ind = find_indices(targets, time_vec);
+    std::vector<double> pwm;
+    std::vector<double> enc;
+    for (auto i : ind) {
+        pwm.push_back(pwm_left[i]);
+        enc.push_back(enc_m_per_sec_left[i]);
+    }
+
+    // fit
+    LinearFitResult fit = linear_least_squares_fit(enc, pwm);
+
+    // left commands/response plot
+    gp.plot_two_ty(
+        time_vec,
+        cmd_m_per_sec_left,
+        time_vec, enc_m_per_sec_left,
+        "left: cmd vs enc",
+        "time(s)",
+        "m/s",
+        0, "CMD", "ENC");
+
+    //gp.plot_xy(enc_m_per_sec_left, pwm_left, "left: pwm vs enc", 1);
+    //gp.plot_xy(enc, pwm, "left: pwm vs enc clean", 2, "points");
+
+    //gp.plot_xy(fit.x_fit, fit.y_fit, "left: pwm vs enc fit", 3, "points");
+    gp.plot_fit(enc, pwm, fit.x_fit, fit.y_fit, "left: cmd vs enc","enc (m/s)", "pwm", 1);
+
+    printf("left: slope = %.3f, intercept = %.3f\n", fit.slope, fit.intercept);
+
+    // right commands/response plot
+
+    pwm.clear();
+    enc.clear();
+    for (auto i : ind) {
+        pwm.push_back(pwm_right[i]);
+        enc.push_back(enc_m_per_sec_right[i]);
+    }
+
+    // fit
+    fit = linear_least_squares_fit(enc, pwm);
+
+    gp.plot_two_ty(
+        time_vec,
+        cmd_m_per_sec_right,
+        time_vec, enc_m_per_sec_right,
+        "right: cmd vs enc",
+        "time(s)",
+        "m/s",
+        2, "CMD", "ENC");
+
+    //gp.plot_xy(enc_m_per_sec_right, pwm_right, "right: pwm vs enc", 6);
+    //gp.plot_xy(enc, pwm, "right: pwm vs enc clean", 7, "points");
+
+    //gp.plot_xy(fit.x_fit, fit.y_fit, "right: pwm vs enc fit", 8, "points");
+    gp.plot_fit(enc, pwm, fit.x_fit, fit.y_fit, "right: cmd vs enc","enc (m/s)", "pwm", 3);
+
+
+    printf("right: slope = %.3f, intercept = %.3f\n", fit.slope, fit.intercept);
+
+
+    // voltage
+    gp.plot_xy(time_vec, voltage,"voltage","time(s)","V", 4);
 }

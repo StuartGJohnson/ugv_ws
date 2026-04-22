@@ -38,11 +38,15 @@ public:
   void plot_xy(const std::vector<double>& ptsx,
                const std::vector<double>& ptsy,
                const std::string& title,
+               const std::string& xlabel,
+               const std::string& ylabel,
                int window_id,
                const std::string& style = "lines") {
     size_t n = std::min(ptsx.size(), ptsy.size());
     cmd("set term qt " + std::to_string(window_id));
     cmd("set title '" + title + "'");
+    cmd("set xlabel '" + xlabel + "'");
+    cmd("set ylabel '" + ylabel + "'");
     cmd("plot '-' with " + style + " title '" + title + "'");
     for (size_t i=0; i<n; i++) {
       std::fprintf(gp_, "%.12g %.12g\n", ptsx[i], ptsy[i]);
@@ -100,11 +104,64 @@ public:
     // std::this_thread::sleep_for(std::chrono::milliseconds(500));
   }
 
+void plot_fit(const std::vector<double>& x1,
+                 const std::vector<double>& y1,
+                 const std::vector<double>& x2,
+                 const std::vector<double>& y2,
+                 const std::string& title,
+                 const std::string& xlabel,
+                 const std::string& ylabel,
+                 int window_id)
+  {
+    if (!gp_) throw std::runtime_error("gnuplot pipe not open");
+
+    const size_t n1 = std::min(x1.size(), y1.size());
+    const size_t n2 = std::min(x2.size(), y2.size());
+
+    std::ostringstream ss;
+    ss.precision(12);
+
+    ss << "set term qt " << window_id << "\n"
+      << "set output\n"
+      << "set grid\n"
+      //<< "set size ratio -1\n"
+      << "set title '" << title << "'\n"
+      << "set xlabel '" << xlabel << "'\n"
+      << "set ylabel '" << ylabel << "'\n"
+      << "plot '-' w p lw 2 lc rgb 'blue' title 'DATA', "
+          "'-' w l lw 2 lc rgb 'red' title 'FIT'\n";
+
+    // Dataset 1 (skip non-finite points so gnuplot doesn't abort parsing)
+    for (size_t i = 0; i < n1; ++i) {
+      if (finite(x1[i]) && finite(y1[i])) {
+        ss << x1[i] << " " << y1[i] << "\n";
+      }
+    }
+    ss << "e\n";
+
+    // Dataset 2
+    for (size_t i = 0; i < n2; ++i) {
+      if (finite(x2[i]) && finite(y2[i])) {
+        ss << x2[i] << " " << y2[i] << "\n";
+      }
+    }
+    ss << "e\n";
+
+    const std::string s = ss.str();
+    std::fwrite(s.data(), 1, s.size(), gp_);
+    std::fflush(gp_);
+
+    // Optional extra delay if your test exits immediately after plotting.
+    // std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  }
+
   void plot_two_ty(const std::vector<double>& x1,
                  const std::vector<double>& y1,
                  const std::vector<double>& x2,
                  const std::vector<double>& y2,
                  const std::string& title,
+                 const std::string& xlabel,
+                 const std::string& ylabel,
                  int window_id,
                  const std::string& xy1_name="GT",
                  const std::string& xy2_name="EKF"
@@ -122,6 +179,8 @@ public:
       << "set output\n"
       << "set grid\n"
       << "set title '" << title << "'\n"
+      << "set xlabel '" << xlabel << "'\n"
+      << "set ylabel '" << ylabel << "'\n"
       << "plot '-' w l lw 2 lc rgb 'red' title '" << xy1_name << "', "
           "'-' w l lw 2 lc rgb 'blue' title '" << xy2_name << "'\n";
 
