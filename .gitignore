@@ -13,4 +13,7 @@ frames*.pdf
 frames*.gv
 /rosgraph*
 /trajectory_data_collector
+/random_droppings
+/venv
+/tmp
 

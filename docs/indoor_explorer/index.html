@@ -973,10 +973,13 @@ xyz/rpy: [-0.00087293  0.00217825  0.00588482] [-0.01896374  0.01090149  0.00443
     <pre class="mmd">
      flowchart TD
       A["rtabmap (SLAM)"] --> B["octomap_grid"]
-      A --> TF1["map --> odom"]
-      OD["/odom"] --> TF2["odom --> base_link"]
-      TF1 --> TF["/tf"]
-      TF2 --> TF
+      A --> TF1
+      OD["/odom"] --> TF2
+      subgraph TF["/tf"]
+        TF1["map --> odom"]
+        TF2["odom --> base_link"]
+      end
+      TF --> A
       TF --> GC
       B --> GCS
       D["/scan"] --> GCVG

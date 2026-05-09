@@ -19,6 +19,9 @@
         "/home/sjohnson/ugv_ws/src/ugv_localization/include/**",
         "/home/sjohnson/ugv_ws/src/ground_truth_republish/include/**",
         "/home/sjohnson/ugv_ws/src/ugv_main/ugv/include/**",
+        "/home/sjohnson/ugv_ws/src/global_robot_localization/include/**",
+        // this is to access built action files - don't edit these!
+        "${workspaceFolder}/install/global_robot_localization/include/global_robot_localization/global_robot_localization/action/**",
         "/usr/include/**"
       ],
       "name": "ROS",
