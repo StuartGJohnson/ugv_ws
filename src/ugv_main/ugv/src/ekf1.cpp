@@ -138,7 +138,7 @@ Matrix<double, 5, 2> Ekf1::Gmat(const Vector5d& x, const Vector2d& u, const doub
     Matrix<double, 5, 2> G;
     G << 0.5 * dt * c, 0.5 * dt * c,
          0.5 * dt * s, 0.5 * dt * s,
-         -dt/x(4), dt/x(4),
+         dt/x(4), -dt/x(4),
          0, 0,
          0, 0 ;
     return G;

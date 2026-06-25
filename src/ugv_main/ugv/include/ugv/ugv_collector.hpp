@@ -117,6 +117,7 @@ private:
     std::vector<double> cmd_m_per_sec_right;
     std::vector<double> pwm_right;
     std::vector<double> voltage;
+    std::vector<int64_t> time_vec_raw;
     std::vector<double> time_vec;
 
     // --- Subscriptions ---
@@ -149,6 +150,8 @@ private:
     bool last_timestamp_set_;
     int command_step_;
     int iter_count;
+    int64_t first_timestamp;
+    bool first_timestamp_set;
 
 
     // --- Parameters ---

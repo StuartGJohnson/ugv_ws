@@ -82,7 +82,8 @@ UgvCollector::UgvCollector(std::map<int, Command> commands)
       estop_(false),
       last_timestamp_set_(true),
       command_step_(0),
-      iter_count(0){
+      iter_count(0),
+      first_timestamp_set(false){
     // --- Declare and Get Parameters ---
     this->declare_parameter("vendor_id", "1a86");
     this->declare_parameter("product_id", "55d3");
@@ -148,10 +149,10 @@ UgvCollector::UgvCollector(std::map<int, Command> commands)
     // Start the dedicated reading thread in BaseController
     base_controller_.start();
 
-    clock_sync();
+    //clock_sync();
 
     // make sure the clock sync gets through
-    rclcpp::sleep_for(std::chrono::milliseconds(100));
+    //rclcpp::sleep_for(std::chrono::milliseconds(100));
 
     // flush the msg queue
     base_controller_.flush();
@@ -311,11 +312,18 @@ void UgvCollector::set_timestamp(const nlohmann::json &data)
 {
   // for the collector, use the robot timestamps
   //std::cout << "Parsed feedback: " << data.dump(4) << std::endl;
-  double robot_stamp = data["tsec"].get<float>();
-  time_vec.push_back(robot_stamp);
-  rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
-  rclcpp::Time robots_robot_timestamp_  = last_clock_sync_sent_time_ + dtSec;
-  robot_timestamp_ = robots_robot_timestamp_;
+  int64_t robot_stamp = data["tus"].get<int64_t>();
+  rclcpp::Time ros2_timestamp(robot_stamp * 1000LL, RCL_SYSTEM_TIME);
+  robot_timestamp_ = ros2_timestamp;
+  time_vec_raw.push_back(robot_stamp);
+  if (!first_timestamp_set){
+    first_timestamp = robot_stamp;
+    first_timestamp_set = true;
+  }
+  double time_elapsed = (robot_stamp - first_timestamp) * 1.0e-6;
+  time_vec.push_back(time_elapsed);
+  //rclcpp::Duration dtSec = rclcpp::Duration::from_seconds(robot_stamp);
+
   // for now, we just use host-side timestamps (like the camera and lidar)
 //   if (last_timestamp_set_) {
 //     rclcpp::Time current_time = this->get_clock()->now();

@@ -4,7 +4,7 @@ ground_truth_republish_node:
     source_topic: "/gt_pose"
     odom_topic: "/odom"
     publish_tf: true
-    publish_map_to_odom: true
+    publish_map_to_odom: false
     odom_frame_id: "odom"
     base_frame_id: "base_footprint"
     map_frame_id: "map"

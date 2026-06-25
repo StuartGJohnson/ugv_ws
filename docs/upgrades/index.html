@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upgrades</title>
+
+    <style>
+      /* Dark-theme friendly: inherit colors, no sticky */
+      .toc { margin: 1rem 0; padding: 0; }
+      .toc ul { list-style: none; margin: 0; padding-left: 0; }
+      .toc li { margin: 0.125rem 0; }
+      .toc a { color: inherit; text-decoration: none; display: block; line-height: 1.25; }
+      .toc a:hover { text-decoration: underline; }
+
+      /* Indentation + subtle size by level */
+      .toc ul ul { padding-left: 1rem; }
+      .toc a.lvl-1 { font-weight: 600; font-size: 1.00em; }
+      .toc a.lvl-2 { font-weight: 500; font-size: 0.97em; opacity: .95; }
+      .toc a.lvl-3 { font-weight: 500; font-size: 0.94em; opacity: .88; }
+      .toc a.lvl-4 { font-weight: 400; font-size: 0.92em; opacity: .80; }
+      .toc a.lvl-5 { font-weight: 400; font-size: 0.90em; opacity: .75; }
+      .toc a.lvl-6 { font-weight: 400; font-size: 0.88em; opacity: .70; }
+
+      /* If you have a fixed header, make anchors land below it: adjust as needed */
+      h1, h2, h3, h4, h5, h6 { scroll-margin-top: 64px; }
+    </style>
+
+    <style>
+      /* optional, but makes it look terminal-ish and preserves tabs */
+      .term {
+        white-space: pre;       /* keep spaces/newlines exactly */
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        tab-size: 4;
+        padding: .75rem;
+        border: 1px solid #444;
+        border-radius: 8px;
+        overflow: auto;         /* horizontal scroll instead of wrapping */
+      }
+    </style>
+
+    <style>
+        :root {
+            color-scheme: dark;
+        }
+
+        body {
+            margin: 0;
+            padding: 24px;
+            background: #0b0c10;
+            color: #e5e7eb;
+            font: 14px/1.4 system-ui, sans-serif;
+        }
+
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+
+        /* Lightbox modal */
+        #svgLightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .75);
+            display: none;
+            z-index: 9999;
+        }
+
+        #svgStage {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+        }
+
+        /* content layer */
+        #svgStage svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        #svgToolbar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 3;
+        }
+
+        /* above stage */
+        #svgClose {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 3;
+        }
+
+        #svgStatus {
+            position: absolute;
+            left: 12px;
+            bottom: 12px;
+            z-index: 3;
+            color: #cbd5e1;
+            background: rgba(0, 0, 0, .5);
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        #svgToolbar button, #svgClose {
+            background: #1f2937;
+            color: #e5e7eb;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 6px 10px;
+            cursor: pointer;
+        }
+
+        #svgToolbar button:hover, #svgClose:hover {
+            background: #0b1220;
+        }
+      /* Namespaced so it won't collide with your styles */
+      .mp4-mini {
+        font: 14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, sans-serif;
+        color: #e5e7eb;
+        background: #0b1220;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        padding: 10px;
+        width: min(100%, 900px);
+      }
+      .mp4-mini-wrap {
+        position: relative;
+        width: 100%;
+        aspect-ratio: 16/9;
+        background: #000;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .mp4-mini video {
+        position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+      }
+      .mp4-mini-controls {
+        display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap;
+      }
+      .mp4-mini button, .mp4-mini input {
+        background: #0f172a; color: #e5e7eb; border: 1px solid #263042; border-radius: 8px;
+        padding: 6px 10px; font: inherit; cursor: pointer;
+      }
+      .mp4-mini button:hover { border-color: #3b82f6; }
+      .mp4-mini .mp4-mini-speed input { width: 70px; text-align: right; }
+      .mp4-mini .spacer { flex: 1; }
+        </style>
+        <script src="https://unpkg.com/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+
+    <!-- Babylon core + loaders (non-module, safe for most hosting) -->
+    <script src="https://cdn.babylonjs.com/babylon.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+    <style>
+      /* Namespaced viewer styles; safe to mix with your page CSS */
+      .glb-viewer{
+        overscroll-behavior: contain;
+        position: relative;
+        width: min(100%, 900px);           /* tweak as you like */
+        aspect-ratio: 16 / 9;
+        background: #0b0c10;
+        border: 1px solid #334155;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .glb-canvas{
+        position: absolute; inset: 0;
+        touch-action: none;
+        width: 100%; height: 100%;
+        display: block;
+      }
+      .glb-status{
+        position: absolute; left: 8px; top: 8px;
+        font: 12px/1.35 system-ui, sans-serif;
+        color: #e5eef5; max-width: 60ch;
+        background: rgba(0,0,0,.55);
+        padding: 6px 10px; border-radius: 8px;
+        white-space: pre-wrap; z-index: 2;
+        pointer-events: none;
+      }
+    </style>
+
+    <!-- Mermaid (global/UMD build, stable v10) -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+    <style>
+      .mmd{
+        display: inline-block;      /* shrink-wrap */
+        vertical-align: top;
+        margin: 8px;
+        background: #0b1220;
+        border: 1px solid #334155;
+        border-radius: 10px;
+        padding: 10px;
+        visibility: hidden;         /* hide DSL until we size the SVG */
+        overflow: visible;
+        max-width: 100%;            /* stay responsive in narrow columns */
+      }
+      .mmd svg{
+        display: block;             /* no inline gaps */
+        /* we'll set explicit pixel width/height via JS */
+      }
+      .mmd-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; }
+      .mmd-row .mmd{ margin:0; }
+    </style>
+
+    <style>
+      .mmd-figure{
+        display:inline-block;       /* shrink-wrap each diagram+caption */
+        vertical-align: top;
+        margin:8px;
+        text-align:center;
+      }
+      .mmd-figure .mmd{             /* your diagram block */
+        display:block;
+        margin:0;                   /* figure controls spacing now */
+      }
+      .mmd-caption{
+        margin-top:6px;
+        font:12px/1.35 system-ui, sans-serif;
+        color:#a8b3c7;
+      }
+      /* if you use the flex row helper */
+      .mmd-row{ display:flex; flex-wrap:wrap; gap:12px; align-items:flex-start; }
+      .mmd-row .mmd-figure{ margin:0; }
+    </style>
+
+    <!-- Graphviz WASM (ES module); creates window.__graphvizPromise -->
+    <script type="module">
+      import { Graphviz } from "https://cdn.jsdelivr.net/npm/@hpcc-js/wasm@2/dist/index.min.js";
+      window.__graphvizPromise = Graphviz.load();
+    </script>
+
+    <style>
+      /* Tight, stackable graph blocks */
+      .dot-figure{ display:inline-block; vertical-align:top; margin:8px; text-align:center; }
+      .dot{ display:block; background:#0b1220; border:1px solid #334155; border-radius:10px; padding:10px; }
+      /* Shrink-wrap to SVG’s own size, but allow shrinking in narrow columns */
+      .dot svg{ display:block; width:auto; height:auto; max-width:100%; }
+      .dot-caption{ margin-top:6px; font:12px/1.35 system-ui,sans-serif; color:#a8b3c7; }
+      /* Hide raw DOT text to avoid flash-of-dot (FOD) */
+      .dot { visibility: hidden; }
+      /* Reveal after we inject the SVG */
+      .dot[data-rendered="true"] { visibility: visible; }
+
+    </style>
+
+    <style>
+      /* Figure wrapper */
+      .tbl-figure{ display:inline-block; vertical-align:top; margin:12px; text-align:center; }
+
+      /* Scrollable frame (so wide tables don’t blow the layout) */
+      .tbl-wrap{
+        max-width:min(100%, 900px);
+        background:#0b1220;
+        border:1px solid #334155;
+        border-radius:10px;
+        overflow:auto;            /* horizontal scroll if needed */
+      }
+
+      /* Table core */
+      /* Table core */
+      .tbl{
+        border-collapse:separate; border-spacing:0; width:100%;
+        font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif;
+        color:#e5e7eb;
+      }
+      .tbl caption{ caption-side:top; padding:8px 12px; font-weight:600; color:#cbd5e1; }
+      .tbl th, .tbl td{ padding:8px 12px; border-bottom:1px solid #1f2937; vertical-align:top; }
+      .tbl thead th{
+        position:sticky; top:0; z-index:1;
+        background:#0f172a; color:#e2e8f0; border-bottom:1px solid #334155;
+        text-align:left; font-weight:600;
+      }
+      .tbl tbody tr:nth-child(odd){ background:#0c1220; }
+      .tbl tbody tr:hover{ background:#0d1626; }
+
+      /* Rounded corners on the container + top row */
+      .tbl thead th:first-child{ border-top-left-radius:10px; }
+      .tbl thead th:last-child{ border-top-right-radius:10px; }
+      .tbl tr:last-child td:first-child{ border-bottom-left-radius:10px; }
+      .tbl tr:last-child td:last-child{ border-bottom-right-radius:10px; }
+
+      /* Utilities */
+      .tbl .num{ text-align:right; font-variant-numeric:tabular-nums; }
+      .tbl .mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; }
+      .tbl-compact .tbl th, .tbl-compact .tbl td{ padding:6px 10px; }
+
+      /* Figure caption */
+      .tbl-caption{ margin-top:6px; font:12px/1.35 system-ui, sans-serif; color:#a8b3c7; }
+
+      /* Accessibility helper to hide a table caption but keep it for screen readers */
+      .visually-hidden{
+        position:absolute !important; height:1px; width:1px; overflow:hidden;
+        clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px;
+      }
+      /* Opt-in vertical column borders */
+      .tbl.tbl-cols th,
+      .tbl.tbl-cols td {
+        border-right: 1px solid #1f2937; /* same tone as your row dividers */
+      }
+      .tbl.tbl-cols th:last-child,
+      .tbl.tbl-cols td:last-child {
+        border-right: none;              /* no border on the far right edge */
+      }
+
+      /* Optional: only body gets column borders (header stays clean) */
+      .tbl.tbl-cols-body tbody td { border-right: 1px solid #1f2937; }
+      .tbl.tbl-cols-body tbody td:last-child { border-right: none; }
+
+    </style>
+
+    <style>
+        .fig-center { text-align: center; }              /* centers inline-block children */
+        .fig-center > .figure,
+        .fig-center > .dot-figure,
+        .fig-center > .mmd-figure,
+        .fig-center > .tbl-figure {
+            display: inline-block; /* shrink-wrap */
+            text-align: left; /* keep captions left if you want */
+        }
+    </style>
+</head>
+
+
+<body>
+
+<nav>
+    <a href="../">⬅ Home</a>
+</nav>
+
+<h1>Upgrades</h1>
+
+<nav id="toc" aria-label="Table of contents"></nav>
+
+<main>
+<p>
+    Robot firmware updates and ROS2 package upgrades for better odometry, timing and motor control via upgrades of the UGV02 FW and SW stacks. The general design constraints were:
+</p>
+<ul>
+    <li>Stick with the current ESP32/Waveshare robot board. There are viable, likely better alternatives, such as the HiWonder STM32-based Ros Robot Controller v1.2. This card could be used to run, for example, Ardurover on the robot, with better time sync and control connections to the robot host (e.g., the NVIDIA Orin). </li>
+    <li>Generally re-use as much of the UGV02 Waveshare firmware as possible. Try to avoid major rewrites of the FW code base - which is tempting!</li>
+    <li>Retain Arduino IDE for FW build and deploy.</li>
+    <li>Rewrite the core UGV02 ROS2 nodes in C++ for performance.</li>
+    <li>Attempt to improve proprioceptive odometry (a challenge for skid-steer robots) so that the ROS2 localization (if not SLAM) stack operates smoothly and robustly, with the robot performing few recovery actions during navigation. The current ROS2 stack requires Lidar odometry (rf2o_laser_odometry) due to deficiencies in odometry.</li>
+    <li>Use AI tools to accelerate development, design and coding. Avoid AI use in updating FW.</li>
+    <li>Adapting the ROS2 navigation stack running on the robot is in-bounds. For example, odometry (especially proprioceptive) is very difficult for a skid-steer robot with high angular velocity (e.g., spin-in-place). One option is to simply not do this. The use of Reeds-Shepp trajectories would prevent high angular velocities, for example. </li>
+    <li>Concentrate on indoor performance first - the skid-steer kinematics are hopefully stable for (fixed) indoor surfaces.</li>
+</ul>
+
+
+<h2>Robot architecture</h2>
+
+<p>
+    As a first implementation, a single, modest data update rate (28.5Hz) is chosen. This simplifies a (custom) EKF implementation for sensor fusion, and may (data is presented below) be adequate for indoor surfaces at slower speeds.
+</p>
+<p>
+    The UGV02 hosts an ESP32 processor, an IMU (ICM 20948), the motors and PWM drivers, and the motor encoders. For simplicity, the IMU DMP (Digital Motion Processor) is set to produce a ~28Hz FIFO stream of filtered IMU data. The ESP32 main loop polls the IMU FIFO much faster than 28Hz, and clears the FIFO buffer faster than it is filled. When an imu update occurs, PID loops are computed and outputs applied to the motors. For each imu update, timestamped IMU and encoder data is sent back to the host computer via USB UART telemetry. The host computer computes robot odometry using sensor fusion via an EKF - fusing the IMU gyroscope and motor encoder data (see the EKF section).
+</p>
+
+<p>
+    In order to provide timestamps synchronized across the LAN for UART telemetry, SNTP is used to synchronize the UGV02 ESP32 clock with an NTP chrony server on the LAN. All hosts on the LAN are running chrony and targeting the same host as the (local) timeserver.
+</p>
+
+<p>
+    The UGV02 ESP32 wireless is used to provide clock sync, all of which is provided by standard ESP32 WiFi modules. While not as precise as other synchronization methods, this is well within the capabilities of the ESP32 SW stack. It is also less hacky than some sort of custom synchronization via the UART channel (and also independent of the UART channel, to some degree). A refinement of this approach would be for the robot host (the Orin, for UGV02x) to be the chrony timeserver. However, in development, it is easier to use a more stable (than the robot) local timeserver on the LAN.
+</p>
+
+<figure class="tbl-figure">
+  <div class="tbl-wrap">
+    <table class="tbl tbl-cols" aria-describedby="t1-caption">
+      <!-- Visible <figcaption> below, and an invisible <caption> for SRs -->
+      <caption class="visually-hidden">UGV fleet summary (units, status, battery)</caption>
+      <thead>
+        <tr>
+          <th>Manuf.</th>
+          <th>Model</th>
+          <th>Description</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>EBYTE</th>
+          <td>ESP32-WROOM-32UE</td>
+          <td>microcontroller</td>
+          <td>1</td>
+        </tr>
+      <tbody>
+        <tr>
+          <td>WCH</td>
+          <td>CH343</td>
+          <td>USB-to-UART</td>
+          <td>2</td>
+        </tr>
+        <tr>
+          <td>InvenSense</td>
+          <td>ICM20948</td>
+          <td>IMU</td>
+          <td>1</td>
+        </tr>
+        <tr>
+          <td>Waveshare</td>
+          <td>DCGM-370-12V-EN-333RPM</td>
+          <td>brushed motor</td>
+          <td>4</td>
+        </tr>
+        <tr>
+          <td>Toshiba</td>
+          <td>TB6612FNG</td>
+          <td>Dual channel H-bridge</td>
+          <td>2</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <figcaption id="t1-caption" class="mmd-caption">Table 1 — Waveshare ROS Driver for Robots board components.</figcaption>
+</figure>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart LR
+      subgraph RH["Robot Host(Orin)"]
+        USBR["USB"]
+        WR["WiFi"]
+      end
+      subgraph IMU["IMU (20948)"]
+        DMP["DMP<br/>28.5Hz<br/>FIFO"]
+      end
+      LF --- TB1
+      TB1["TB6612FNG"] --- LEDL
+      RF --- TB2
+      TB2["TB6612FNG"] --- LEDR
+      subgraph LF["LF motor"]
+        ELF["encoder"]
+      end
+      subgraph RF["RF motor"]
+        ERF["encoder"]
+      end
+      TB3 --> LR["LR motor"]
+      LEDL --> TB3["TB6612FNG"]
+      TB4 --> RR["RR motor"]
+      LEDR --> TB4["TB6612FNG"]
+      ELF --> ESP32
+      ERF --> ESP32
+      USBR <--> |"USB Telemetry/Control" | UC["CH343"]
+      UC <--> |UART| ESP32
+      WR <-.-> |chrony time sync| LAN["LAN"]
+      LAN <-.-> |SNTP time sync| W
+      subgraph ESP32["ESP32"]
+        LEDL["LEDC<br/>PWM<br/>left"]
+        LEDR["LEDC<br/>PWM<br/>right"]
+        W["WiFi"]
+      end
+      ESP32 <--> |I2C| DMP
+      ESP32 --> |I2C| OLED["OLED<br/>display"]
+    </pre>
+    <figcaption class="mmd-caption">Fig 1: Robot architecture. Note that the mermaid diagramming forces some compromises in layout; all motor controls are outgoing from the ESP32. </figcaption>
+</figure>
+
+<p>
+    The robot uses I2C for both the OLED display update and IMU comms. All updates to the OLED display are done at a slow rate - 5 seconds between updates to reduce I2C load. Updating the OLED screen every iteration of the fast polling loop is certainly to be avoided.
+</p>
+
+<h2>PI motor control</h2>
+<p>
+    The skid-steer geometry of the UGV02 couples the kinematic response of the robot (it's heading and velocity) through the ground (or floor) surface. In order to achieve a high degree of control authority over the robot, it is beneficial to control the motors via their coupled motion, i.e. through the kinematic model. In this case (see the section on the EKF below), the kinematic model is not entirely known, as it is dependent on the nature of the ground surface the robot is driving on. As a nearby control alternative, the robot's L/R differential and sum velocities are controlled by a PI loop. This moves the unknown parameter of the kinematic model to the ROS2 side, where perhaps it can be part of the perception stack (in the future). Furthermore, to make the robot responsive, we include a calibrated feed-forward model into the controller. See the diagram below.
+</p>
+
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart LR
+      VW["cmd_vel twist"] --> IK["Inverse<br/>Kinematics"]
+      IK --> LC["Left speed (m/s)"]
+      IK --> RC["Right speed (m/s)"]
+      LC --> U["UART/USB"]
+      RC --> U
+    </pre>
+    <figcaption class="mmd-caption">Fig 2: Robot control, part 1. The ROS2 planning and navigation nodes emit a stream of robot twist commands. These are converted to L/R motor targets via the inverse kinematics. </figcaption>
+</figure>
+<p></p>
+<figure class="mmd-figure">
+    <pre class="mmd">
+     flowchart LR
+      U["UART/USB"] --> L["L"]
+      U --> R["R"]
+      L --> P1["(L+R)/2"]
+      MES["(EL+ER)/2"] --> PE
+      R --> P1
+      L --> M1["(R-L)/2"]
+      DES["(ER-EL)/2"] --> PEM
+      R --> M1
+      P1 --> FF["FF"]
+      P1 --> PE["-"]
+      PE --> KP["Kp"]
+      KP --> P2["+"]
+      FF --> P2
+      P2 --> MEAN["M (Mean ctrl)"]
+      PE --> KI["Ki"]
+      KI --> I1["∫dt"]
+      I1 --> I1LIM["anti<br/>-windup"]
+      I1LIM --> P2
+      M1 --> FFM["FF"]
+      M1 --> PEM["-"]
+      PEM --> KPM["Kp"]
+      KPM --> P2M["+"]
+      FFM --> P2M
+      PEM --> KIM["Ki"]
+      KIM --> I1M["∫dt"]
+      I1M --> I1MLIM["anti<br/>-windup"]
+      I1MLIM --> P2M
+      P2M --> DIFF["D (Diff ctrl)"]
+      MEAN --> M3["(M-D)"]
+      DIFF --> M3
+      MEAN --> P3["(M+D)"]
+      DIFF --> P3
+      M3 --> MC["Clamp"]
+      MC --> MSL["Slew-rate limiter"]
+      MSL --> LM["left motor"]
+      P3 --> PC["Clamp"]
+      PC --> PSL["Slew-rate limiter"]
+      PSL --> RM["right motor"]
+      LM -.-> LE["EL: left encoder<br/>speed"]
+      RM -.-> RE["ER: right encoder<br/>speed"]
+    </pre>
+    <figcaption class="mmd-caption">Fig 3: Robot control, part 2. The robot PI loops attempt to track the robot commands. Note the feedback is through the left and right encoder speeds (the actual graph edges blow up the mermaid diagram. Dashed lines are mechanical connections.</figcaption>
+</figure>
+<p>The TB6612FNG (see Table 1) motor drivers can easily be damaged by large, fast changes to the PWM commands sent to the motors. There are two lines of defense against this. First, the PWM sent to the motors is clamped at maximum PWM limits, and zeroed out when below a threshold. Second, the PWM motor commands are slew-rate limited - that is, the change in the PWM command between adjacent time points is limited to a fraction of the full motor PWM range. These motor protections are shown in Fig. 3.
+</p>
+
+<p>
+    Finally, wind-up controls are implemented to improve motor control and responsiveness (these are also shown in Fig. 3). There are a series of anti-windup steps implemented:
+</p>
+<ul>
+    <li>If setpoints and current speeds are below thresholds, the integral term is zeroed.</li>
+    <li>If setpoints change sign, the integral term is zeroed.</li>
+    <li>If the current motor command was obtained under PWM clamping or slew-rate limiting, the integral term is not accumulated. This is done independently for mean and differential commands/integral terms.</li>
+    <li>Integral terms are clamped at maximum values.</li>
+</ul>
+
+<h2>Sensor fusion for odometry</h2>
+
+<p> As mentioned previously, sensor fusion is performed at a single data rate (28.5Hz). This rate is a chosen update frequency of the ICM20948 DMP. Later versions will concentrate on higher rates for IMU integration, and may use more standard SW tools for sensor fusion (like the ROS2 robot_localization package).
+</p>
+
+</p>
+</main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const toc = document.getElementById('toc');
+  if (!toc) return;
+
+  // Ensure TOC can receive focus when returning via Back
+  if (!toc.hasAttribute('tabindex')) toc.setAttribute('tabindex', '-1');
+
+  // Use <main> if present; otherwise scan the whole body
+  const scope = document.querySelector('main') || document.body;
+  const headings = Array.from(scope.querySelectorAll('h1,h2,h3,h4,h5,h6'));
+  if (!headings.length) { toc.textContent = '(no headings found)'; return; }
+
+  // Ensure unique IDs on headings
+  const slug = s => s.toLowerCase().trim().replace(/[^\w\- ]+/g,'').replace(/\s+/g,'-') || 'section';
+  const seen = new Set();
+  for (const h of headings) {
+    if (!h.id) h.id = slug(h.textContent);
+    const base = h.id; let i = 1;
+    while (seen.has(h.id)) h.id = `${base}-${i++}`;
+    seen.add(h.id);
+  }
+
+  // Build nested list by heading level (no stray first bullet)
+  const root = document.createElement('ul');
+  let currentLevel = parseInt(headings[0].tagName.slice(1), 10);
+  const stack = [{ level: currentLevel - 1, ul: root }];
+
+  const pushList = level => {
+    const ul = document.createElement('ul');
+    const parentUL = stack[stack.length - 1].ul;
+    const lastLI = parentUL.lastElementChild;
+    (lastLI || parentUL).appendChild(ul);
+    stack.push({ level, ul });
+  };
+  const popList = () => { stack.pop(); };
+
+  for (const h of headings) {
+    const level = parseInt(h.tagName.slice(1), 10);
+    while (level > stack[stack.length - 1].level + 1) pushList(stack[stack.length - 1].level + 1);
+    while (level < stack[stack.length - 1].level) popList();
+    if (level > stack[stack.length - 1].level) pushList(level);
+
+    const li = document.createElement('li');
+    const a = document.createElement('a');
+    a.href = `#${h.id}`;
+    a.textContent = h.textContent.trim();
+    a.className = `lvl-${level}`;
+    li.appendChild(a);
+    stack[stack.length - 1].ul.appendChild(li);
+  }
+
+  toc.textContent = '';
+  toc.appendChild(root);
+
+  // Instant jump + Back goes to TOC first
+  toc.addEventListener('click', e => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    e.preventDefault();
+
+    const id = a.getAttribute('href').slice(1);
+    const target = document.getElementById(id);
+    if (!target) return;
+
+    if (location.hash !== '#toc') history.pushState({ at: 'toc' }, '', '#toc'); // waypoint
+    history.pushState({ at: 'section', id }, '', '#' + id);
+
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.scrollIntoView({ behavior: 'auto', block: 'start' });
+    target.focus({ preventScroll: true });
+  });
+
+  window.addEventListener('popstate', () => {
+    if (location.hash === '#toc') {
+      toc.scrollIntoView({ behavior: 'auto', block: 'start' });
+      toc.focus({ preventScroll: true });
+    }
+  });
+});
+</script>
+
+<script>
+(function(){
+  // ---- Dark theme prelude (inserted at top of each DOT) ----
+  const DARK_THEME = `
+    // global
+    bgcolor="transparent";
+    fontcolor="#e5eef5";
+    fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif";
+    // nodes
+    node [
+      shape=box,
+      style="filled,rounded",
+      fillcolor="#0b1220",
+      color="#334155",
+      fontcolor="#e5eef5",
+      fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif",
+      margin="0.07,0.05"
+    ];
+    // edges
+    edge [
+      color="#94a3b8",
+      fontcolor="#cbd5e1",
+      fontname="Segoe UI, system-ui, -apple-system, Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif",
+      arrowsize=0.8
+    ];
+  `;
+
+  function injectTheme(dot, theme){
+    if (!theme || theme === 'none') return dot; // no theming
+    const prelude = (theme === 'dark') ? DARK_THEME : '';
+    if (!prelude) return dot;
+
+    // Insert right after the opening '{' of the graph/digraph
+    // so that any user-defined attributes later in the DOT override these defaults.
+    return dot.replace(/(\b(?:di)?graph\b[^{}]*\{)/i, `$1\n${prelude}\n`);
+  }
+
+  async function renderOne(el){
+    const gv = await window.__graphvizPromise;
+    const engine = (el.dataset.engine || 'dot').toLowerCase();   // dot|neato|fdp|...
+    const theme  = (el.dataset.theme  || 'dark').toLowerCase();  // 'dark' | 'none'
+    let dot = '';
+
+    if (el.tagName === 'PRE') {
+      dot = el.textContent.trim();
+    } else if (el.dataset.src) {
+      const res = await fetch(el.dataset.src);
+      dot = await res.text();
+    } else {
+      dot = el.textContent.trim();
+    }
+
+    // Apply theme prelude then render
+    const themed = injectTheme(dot, theme);
+    const svg = gv.layout(themed, "svg", engine);
+    el.innerHTML = svg;
+    el.setAttribute('data-rendered', 'true');   // <— reveal now
+
+    // Optional uniform downscale per graph
+    const scale = parseFloat(el.dataset.scale || '1');
+    if (scale && scale !== 1) {
+      const svgEl = el.querySelector('svg');
+      if (svgEl) { svgEl.style.transform = `scale(${scale})`; svgEl.style.transformOrigin = 'top left'; }
+    }
+  }
+
+  async function renderAll(){
+    const nodes = document.querySelectorAll('.dot');
+    for (const n of nodes) {
+      try { await renderOne(n); } catch (e) { console.error('DOT render error', e); }
+    }
+  }
+
+  window.renderDotGraphs = renderAll;
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', renderAll);
+  } else {
+    renderAll();
+  }
+})();
+</script>
+
+<script>
+(function(){
+  function tighten(el){
+    const svg = el.querySelector('svg');
+    if (!svg) return;
+
+    // Remove Mermaid's 100% styles/attrs if present
+    svg.style.width = ''; svg.style.height = '';
+    svg.removeAttribute('width'); svg.removeAttribute('height');
+    svg.style.maxWidth = 'none';
+
+    // Compute intrinsic size from viewBox or geometry
+    let w = 300, h = 150;
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    if (vb && vb.width && vb.height) {
+      w = vb.width; h = vb.height;
+    } else {
+      const bbox = svg.getBBox();
+      w = bbox.width || w; h = bbox.height || h;
+    }
+
+    // Optional per-diagram scale: <pre class="mmd" data-mmd-scale="0.9">
+    const scale = parseFloat(el.dataset.mmdScale || '1') || 1;
+    svg.style.width  = (w * scale) + 'px';
+    svg.style.height = (h * scale) + 'px';
+
+    // Now show it
+    el.style.visibility = 'visible';
+  }
+
+  function tightenAll(){
+    document.querySelectorAll('.mmd[data-processed="true"]').forEach(tighten);
+  }
+
+  function bootMermaid(){
+    if (!window.mermaid) return;
+
+    const theme = document.documentElement.dataset.mmdTheme || 'dark';
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: 'loose',
+      theme,
+      fontFamily: 'system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif'
+    });
+
+    // Render all, then tighten on next tick
+    mermaid.run({ querySelector: '.mmd' });
+    // Schedule a couple passes in case layout/fonts load late
+    requestAnimationFrame(tightenAll);
+    setTimeout(tightenAll, 0);
+    setTimeout(tightenAll, 50);
+  }
+
+  // Public API if you inject diagrams later
+  window.renderMermaid = function(){
+    if (!window.mermaid) return;
+    mermaid.run({ querySelector: '.mmd:not([data-processed])' });
+    requestAnimationFrame(tightenAll);
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootMermaid);
+  } else {
+    bootMermaid();
+  }
+})();
+</script>
+
+</body>
+</html>
