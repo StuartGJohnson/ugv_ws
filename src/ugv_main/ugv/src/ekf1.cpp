@@ -100,8 +100,8 @@ Matrix<double, 5, 5> Ekf1::Fmat(const Vector5d& x, const Vector2d& u, const doub
     double v = (u(0) + u(1)) /2.0;
     double omega = (u(1) - u(0)) / x(4);
     F.setIdentity();
-    F(0,2) = -dt * v * cos(x(2));
-    F(1,2) =  dt * v * sin(x(2));
+    F(0,2) = -dt * v * sin(x(2));
+    F(1,2) =  dt * v * cos(x(2));
     F(2,4) = -dt * omega / x(4);
     return F;
 }
@@ -138,7 +138,7 @@ Matrix<double, 5, 2> Ekf1::Gmat(const Vector5d& x, const Vector2d& u, const doub
     Matrix<double, 5, 2> G;
     G << 0.5 * dt * c, 0.5 * dt * c,
          0.5 * dt * s, 0.5 * dt * s,
-         dt/x(4), -dt/x(4),
+         -dt/x(4), dt/x(4),
          0, 0,
          0, 0 ;
     return G;
@@ -163,7 +163,7 @@ Matrix<double, 2, 3> Ekf1::Jmat(const Vector5d& x, const Vector2d& u, const doub
     double b1 = 1.0 / x(4);
     Matrix<double, 2, 3> J;
     J << 0.5, 0.5, 0.0,
-         b1, -b1, -(u(1)-u(0))/(x(4)*x(4));
+         -b1, b1, -(u(1)-u(0))/(x(4)*x(4));
     return J;
 }
 
