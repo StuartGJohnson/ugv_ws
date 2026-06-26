@@ -209,11 +209,11 @@ TEST(EkfReplay, BagCase01)
 
   double t0 = -1.0;
   // perhaps more tuning!
-  double t_min = 4.3;
-  double t_max = 7.3;
+  // double t_min = 4.3;
+  // double t_max = 7.3;
   // pretty good tracking
-  //double t_min = 7.0;
-  //double t_max = 10.0;
+  double t_min = 7.0;
+  double t_max = 10.0;
   int ind_min = -1;
   int ind_max = -1;
 
@@ -320,7 +320,7 @@ TEST(EkfReplay, BagCase01)
   }
 
   GnuplotPipe gp;
-  gp.plot_two_xy(gt_x,gt_y,ekf_x,ekf_y, "GT vs EKF traj.","x","y",0);
+  gp.plot_two_xy(gt_x,gt_y,ekf_x,ekf_y, "GT vs EKF traj.","x(m)","y(m)",0);
 
   // zoom in on gt in t
   std::vector<double> gt_t_zoom(gt_t.begin() + ind_min, gt_t.begin() + ind_max + 1);
@@ -331,7 +331,7 @@ TEST(EkfReplay, BagCase01)
   // zoom in on x and y (to check time alignment)
   std::vector<double> gt_x_zoom(gt_x.begin() + ind_min, gt_x.begin() + ind_max + 1);
   std::vector<double> gt_y_zoom(gt_y.begin() + ind_min, gt_y.begin() + ind_max + 1);
-  gp.plot_two_xy(gt_x_zoom,gt_y_zoom,ekf_x,ekf_y, "GT vs EKF traj. detail","x","y", 2);
+  gp.plot_two_xy(gt_x_zoom,gt_y_zoom,ekf_x,ekf_y, "GT vs EKF traj. detail","x(m)","y(m)", 2);
 
 }
 
