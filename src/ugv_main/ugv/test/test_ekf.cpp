@@ -208,8 +208,12 @@ TEST(EkfReplay, BagCase01)
   std::vector<double> ekf_yaw;
 
   double t0 = -1.0;
-  double t_min = 7;
-  double t_max = 10;
+  // perhaps more tuning!
+  double t_min = 4.3;
+  double t_max = 7.3;
+  // pretty good tracking
+  //double t_min = 7.0;
+  //double t_max = 10.0;
   int ind_min = -1;
   int ind_max = -1;
 
