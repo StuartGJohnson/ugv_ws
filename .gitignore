@@ -16,4 +16,8 @@ frames*.gv
 /random_droppings
 /venv
 /tmp
+/docs/upgrades/ekf_writeup/*.aux
+/docs/upgrades/ekf_writeup/*.log
+/docs/upgrades/ekf_writeup/*.out
+/docs/upgrades/ekf_writeup/*.gz
 

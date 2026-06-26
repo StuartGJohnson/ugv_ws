@@ -1,0 +1,506 @@
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+
+\geometry{margin=1in}
+
+\title{An Extended Kalman Filter for Skid-Steer Robot Odometry with Online Effective Wheel Separation Estimation}
+
+\author{
+Stuart G. Johnson \and ChatGPT (OpenAI)
+}
+
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This note derives an Extended Kalman Filter (EKF) for odometry estimation
+of a skid-steer robot modeled approximately as a differential-drive robot.
+The filter estimates planar pose, gyroscope bias, and an effective wheel
+separation. The effective wheel separation is not interpreted as a purely
+geometric quantity; rather, it is a compact parameter that absorbs some
+of the mismatch between ideal differential-drive kinematics and the
+actual skid-steer motion.
+\end{abstract}
+
+\section{Motivation}
+
+A four-wheel skid-steer robot is often modeled as a differential-drive
+robot. This approximation is convenient, but it is imperfect. During
+turns, the wheels scrub against the ground. This violates the ideal
+nonholonomic differential-drive model.
+
+The goal of this filter is to provide proprioceptive odometry suitable for ROS2
+navigation. The odometry will drift over time, but it should
+be locally smooth and track true robot motion. The filter uses wheel
+velocity estimates and gyroscope measurements. It also estimates an effective
+wheel separation in order to adapt the differential-drive model to the
+observed robot behavior.
+
+\section{State Vector}
+
+The EKF state at time $k$ is
+
+\begin{equation}
+\mathbf{x}_k =
+\begin{bmatrix}
+x_k \\
+y_k \\
+\theta_k \\
+b_{g,k} \\
+b_k
+\end{bmatrix}.
+\end{equation}
+
+The state components are:
+
+\begin{itemize}
+\item $x_k,y_k$: robot position in the odometry frame,
+\item $\theta_k$: robot heading,
+\item $b_{g,k}$: gyroscope yaw-rate bias,
+\item $b_k$: effective wheel separation.
+\end{itemize}
+
+The effective wheel separation $b_k$ should not be interpreted too
+literally as the physical distance between wheels. For a skid-steer
+robot, it is an effective kinematic parameter that can absorb wheel slip,
+tire compliance, load transfer, and other unmodeled effects.
+
+\section{Inputs and Measured Quantities}
+
+Let the measured left and right wheel linear velocities be
+
+\begin{equation}
+\mathbf{u}_k =
+\begin{bmatrix}
+v_{L,k} \\
+v_{R,k}
+\end{bmatrix}.
+\end{equation}
+
+The differential-drive forward velocity estimate is
+
+\begin{equation}
+v_k =
+\frac{v_{R,k}+v_{L,k}}{2}.
+\end{equation}
+
+The wheel-derived yaw-rate estimate is
+
+\begin{equation}
+\omega_k =
+\frac{v_{R,k}-v_{L,k}}{b_k}.
+\end{equation}
+
+The gyroscope measurement is denoted
+
+\begin{equation}
+z_{g,k}.
+\end{equation}
+
+For this EKF, the wheel and gyroscope data are averaged over
+common robot-side sampling intervals and then emitted to the ROS2 system.
+Thus, the filter should process synchronized wheel and IMU packets as
+one discrete update step.
+
+\section{Continuous-Time Process Model}
+
+The continuous-time kinematic model is
+
+\begin{align}
+\dot{x} &= v \cos\theta, \\
+\dot{y} &= v \sin\theta, \\
+\dot{\theta} &= \frac{v_R-v_L}{b}, \\
+\dot{b}_g &= 0, \\
+\dot{b} &= 0.
+\end{align}
+
+
+\section{Discretization}
+
+The Euler update process model is
+
+\begin{equation}
+\mathbf{x}_{k+1} = f(\mathbf{x}_k, \mathbf{u}_k) + \textbf{w}_k
+\end{equation}
+
+where $\textbf{w}_k$ is the process noise. $f$ is defined as:
+
+\begin{align}
+\mathbf{x}_{k+1}&= f(\mathbf{x}_k, \mathbf{u}_k)
+\\
+x_{k+1}
+&=
+x_k
++
+\Delta t_k
+v_k
+\cos\theta_k,
+\\
+y_{k+1}
+&=
+y_k
++
+\Delta t_k
+v_k
+\sin\theta_k,
+\\
+\theta_{k+1}
+&=
+\theta_k
++
+\Delta t_k
+\omega_k,
+\\
+b_{g,k+1}
+&=
+b_{g,k},
+\\
+b_{k+1}
+&=
+b_k.
+\end{align}
+
+\section{Process Jacobian}
+
+The EKF process Jacobian is
+
+\begin{equation}
+F_k =
+\left.
+\frac{\partial f}{\partial \mathbf{x}}
+\right|_{\hat{\mathbf{x}}_{k|k},\mathbf{u}_k}.
+\end{equation}
+
+The full state Jacobian is
+
+\begin{equation}
+F_k =
+\begin{bmatrix}
+1 & 0 & -\Delta t_k v_k sin\theta_k & 0 & 0 \\
+0 & 1 & \Delta t_k v_k cos\theta_k & 0 & 0 \\
+0 & 0 & 1 & 0 &
+-\Delta t_k \frac{\omega_k}{b_k}
+\\
+0 & 0 & 0 & 1 & 0
+\\
+0 & 0 & 0 & 0 & 1
+\end{bmatrix}.
+\end{equation}
+
+
+\section{Input and Process Noise Propagation}
+
+Let the wheel speed covariance be
+
+\begin{equation}
+\Sigma_u =
+\begin{bmatrix}
+\sigma_{v_L}^2 & \sigma_{v_L v_R} \\
+\sigma_{v_L v_R} & \sigma_{v_R}^2
+\end{bmatrix}.
+\end{equation}
+
+If the left and right wheel speed errors are assumed
+uncorrelated, then
+
+\begin{equation}
+\Sigma_u =
+\begin{bmatrix}
+\sigma_{v_L}^2 & 0 \\
+0 & \sigma_{v_R}^2
+\end{bmatrix}.
+\end{equation}
+
+The input Jacobian is
+
+\begin{equation}
+G_k
+=
+\left.
+\frac{\partial f}{\partial \mathbf{u}}
+\right|_{\hat{\mathbf{x}}_{k|k},\mathbf{u}_k}.
+\end{equation}
+
+which evaluates to:
+
+\begin{equation}
+G_k
+=
+\begin{bmatrix}
+\Delta t_k\frac{1}{2}cos\theta_k &
+\Delta t_k\frac{1}{2}cos\theta_k)
+\\
+\Delta t_k\frac{1}{2}sin\theta_k  &
+\Delta t_k\frac{1}{2}sin\theta_k 
+\\
+-\frac{\Delta t_k}{b_k} &
+\frac{\Delta t_k}{b_k}
+\\
+0 & 0
+\\
+0 & 0
+\end{bmatrix}.
+\end{equation}
+
+Random-walk process noise for gyroscope bias and effective wheel separation is
+
+\begin{equation}
+Q_k
+=
+\begin{bmatrix}
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & \sigma_{bg}^2 \Delta t_k & 0 \\
+0 & 0 & 0 & 0 & \sigma_b^2 \Delta t_k
+\end{bmatrix}.
+\end{equation}
+
+Thus the total process covariance contribution is
+
+\begin{equation}
+Q_{k}
+=
+G_k
+\Sigma_u
+G_k^{T}
++
+Q_k
+\end{equation}
+
+\section{Gyroscope Measurement Model}
+
+The gyroscope measurements return yaw rate plus bias:
+
+\begin{equation}
+z_{g,k}
+=
+\omega_k
++
+b_{g,k}
++
+\nu_k,
+\end{equation}
+
+where $\nu_k$ is zero-mean gyroscope measurement noise.
+
+The measurement function is
+
+\begin{equation}
+h(\mathbf{x}_k,\mathbf{u}_k)
+=
+\frac{v_{R,k}-v_{L,k}}{b_k}
++
+b_{g,k}.
+\end{equation}
+
+The measurement Jacobian is
+
+\begin{equation}
+H_k
+=
+\left.
+\frac{\partial h}{\partial \mathbf{x}}
+\right|_{\hat{\mathbf{x}}_{k+1|k},\mathbf{u}_k}.
+\end{equation}
+
+Explicitly,
+
+\begin{equation}
+H_k
+=
+\begin{bmatrix}
+0 &
+0 &
+0 &
+1 &
+-\frac{v_{R,k}-v_{L,k}}{b_k^2}
+\end{bmatrix}.
+\end{equation}
+
+The gyroscope measurement covariance is
+
+\begin{equation}
+R =
+\sigma_g^2.
+\end{equation}
+
+\section{EKF Algorithm}
+
+At each synchronized measurement, the EKF performs the following
+operations:
+
+\subsection{Prediction}
+
+Given the posterior estimate from the previous step,
+
+\begin{equation}
+\hat{\mathbf{x}}_{k|k},
+\end{equation}
+
+and covariance
+
+\begin{equation}
+P_{k|k},
+\end{equation}
+
+compute
+
+\begin{equation}
+\hat{\mathbf{x}}_{k+1|k}
+=
+f(\hat{\mathbf{x}}_{k|k},\mathbf{u}_k).
+\end{equation}
+
+Compute $F_k$ and $G_{u,k}$ at
+$\hat{\mathbf{x}}_{k|k}$ and $\mathbf{u}_k$. Then propagate covariance:
+
+\begin{equation}
+P_{k+1|k}
+=
+F_k
+P_{k|k}
+F_k^T
++
+Q_k.
+\end{equation}
+
+\subsection{Update}
+
+The gyroscope innovation is
+
+\begin{equation}
+r_k
+=
+z_k
+-
+h(\hat{\mathbf{x}}_{k+1|k},\mathbf{u}_k).
+\end{equation}
+The innovation covariance is
+\begin{equation}
+S_k
+=
+H_k
+P_{k+1|k}
+H_k^{T}
++
+R.
+\end{equation}
+The Kalman gain is
+\begin{equation}
+K_{g,k}
+=
+P_{k+1|k}
+H_{g,k}^{T}
+S_{g,k}^{-1}.
+\end{equation}
+The posterior state estimate is
+\begin{equation}
+\hat{\mathbf{x}}_{k+1|k+1}
+=
+\hat{\mathbf{x}}_{k+1|k}
++
+K_{g,k}r_{g,k}.
+\end{equation}
+The covariance update is:
+\begin{equation}
+P_{k+1|k+1}
+=
+(I-K_kH_k)
+P_{k+1|k}
+\end{equation}
+
+\section{ROS2 Odometry Covariances}
+
+The ROS2 \texttt{nav\_msgs/Odometry} message contains pose and twist
+covariances.
+
+The pose is expressed in the frame named by \texttt{header.frame\_id},
+typically \texttt{odom}. The twist is expressed in the frame named by
+\texttt{child\_frame\_id}, typically \texttt{base\_link}.
+
+\subsection{Pose Covariance}
+
+The planar pose covariance is obtained directly from the EKF covariance
+matrix. The entries corresponding to $x$, $y$, and yaw are inserted into
+the ROS2 $6\times 6$ pose covariance matrix with ordering
+
+\begin{equation}
+[x,\ y,\ z,\ roll,\ pitch,\ yaw].
+\end{equation}
+
+For example,
+
+\begin{align}
+\Sigma_{pose}(x,x) &= P(x,x), \\
+\Sigma_{pose}(y,y) &= P(y,y), \\
+\Sigma_{pose}(yaw,yaw) &= P(\theta,\theta), \\
+\Sigma_{pose}(x,yaw) &= P(x,\theta), \\
+\Sigma_{pose}(y,yaw) &= P(y,\theta).
+\end{align}
+
+\subsection{Twist Covariance}
+
+The state definition does not include the twist. Therefore twist covariance must be derived from the uncertainty in the reported twist estimate.
+
+The twist estimate returned to ROS2 is:
+
+\begin{align}
+v &= \frac{v_L+v_R}{2}, \\
+\omega &= \frac{v_R-v_L}{b},
+\end{align}
+
+The ROS2 twist covariance uses ordering
+
+\begin{equation}
+[v_x,\ v_y,\ v_z,\ \omega_x,\ \omega_y,\ \omega_z].
+\end{equation}
+
+Twist covariance for the non-zero components $(v_x,\omega_z)$ is obtained by propagation of errors:
+
+\begin{equation}
+\Sigma_{\mathrm{twist}} (v_x,\omega_z)
+\approx
+J
+\begin{bmatrix}
+\sigma_{v_L}^2 & 0 & 0 \\
+0 & \sigma_{v_R}^2 & 0 \\
+0 & 0 & \sigma_b^2
+\end{bmatrix}
+J^T
+\end{equation}
+where:
+\begin{equation}
+J =
+\begin{bmatrix}
+\dfrac{\partial v}{\partial v_L} &
+\dfrac{\partial v}{\partial v_R} &
+\dfrac{\partial v}{\partial b} \\[8pt]
+
+\dfrac{\partial \omega}{\partial v_L} &
+\dfrac{\partial \omega}{\partial v_R} &
+\dfrac{\partial \omega}{\partial b}
+\end{bmatrix}
+=
+\begin{bmatrix}
+\dfrac{1}{2} & \dfrac{1}{2} & 0 \\[10pt]
+
+-\dfrac{1}{b} & \dfrac{1}{b} &
+-\dfrac{(v_R-v_L)}{b^2}
+\end{bmatrix}
+\end{equation}
+Note that $\Sigma_{\mathrm{twist}} (v_x,\omega_z)$ is a 2x2 matrix which must be distributed into the twist covariance.
+
+ROS2 does not generally like covariance diagonals which are zero. For twist and state covariance, otherwise zero diagonals are set to $9999.0$.
+
+
+\end{document}
