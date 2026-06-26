@@ -554,6 +554,26 @@
 <p>
   A detailed description of the EKF for sensor fusion is provided in: <a href="ekf_writeup/ekf_skidsteer_odometry.pdf" target="_blank">EKF Derivation (PDF) </a>.
 </p>
+
+<p>
+    Tests of the EKF are included in <code>ugv_ws/src/ugv_main/ugv/test/test_ekf.cpp</code>. These tests compare ekf trajectory estimates with the "ground truth" data. The ground truth is obtained via an overhead camera tracking an aruco tag attached to the robot. Note there is some noise in the ground truth, especially in the yaw angle. These tests compute the EKF estimates on BAG files collected for a planned trajectory. A more thorough test would involve collecting trajectories at various curvatures and speeds.
+</p>
+
+<figure class="png">
+    <img src="ekf_xy.png" alt="ekf_xy.png">
+    <figcaption class="mmd-caption">Fig 4: EKF vs ground truth for a trajectory segment. Robot XY location. </figcaption>
+</figure>
+
+<figure class="png">
+    <img src="ekf_detail_xy.png" alt="ekf_detail_xy.png">
+    <figcaption class="mmd-caption">Fig 5: EKF vs ground truth for a trajectory segment. A zoomed-in version of Fig. 4. </figcaption>
+</figure>
+
+<figure class="png">
+    <img src="ekf_detail_yaw.png" alt="ekf_detail_yaw.png">
+    <figcaption class="mmd-caption">Fig 6: EKF vs ground truth for a trajectory segment. Robot yaw. </figcaption>
+</figure>
+
 </main>
 
 <script>

@@ -62,6 +62,8 @@ public:
                  const std::vector<double>& x2,
                  const std::vector<double>& y2,
                  const std::string& title,
+                 const std::string& xlabel,
+                 const std::string& ylabel,
                  int window_id)
   {
     if (!gp_) throw std::runtime_error("gnuplot pipe not open");
@@ -77,6 +79,8 @@ public:
       << "set grid\n"
       << "set size ratio -1\n"
       << "set title '" << title << "'\n"
+      << "set xlabel '" << xlabel << "'\n"
+      << "set ylabel '" << ylabel << "'\n"
       << "plot '-' w l lw 2 lc rgb 'red' title 'GT', "
           "'-' w l lw 2 lc rgb 'blue' title 'EKF'\n";
 

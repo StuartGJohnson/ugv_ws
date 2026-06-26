@@ -316,13 +316,18 @@ TEST(EkfReplay, BagCase01)
   }
 
   GnuplotPipe gp;
-  gp.plot_two_xy(gt_x,gt_y,ekf_x,ekf_y, "GT vs EKF traj.", 0);
+  gp.plot_two_xy(gt_x,gt_y,ekf_x,ekf_y, "GT vs EKF traj.","x","y",0);
 
   // zoom in on gt in t
   std::vector<double> gt_t_zoom(gt_t.begin() + ind_min, gt_t.begin() + ind_max + 1);
   std::vector<double> gt_yaw_zoom(gt_yaw.begin() + ind_min, gt_yaw.begin() + ind_max + 1);
   // plot yaw - much smoother!
   gp.plot_two_ty(gt_t_zoom,gt_yaw_zoom,ekf_t,ekf_yaw, "GT vs EKF yaw","time(s)","rad", 1);
+
+  // zoom in on x and y (to check time alignment)
+  std::vector<double> gt_x_zoom(gt_x.begin() + ind_min, gt_x.begin() + ind_max + 1);
+  std::vector<double> gt_y_zoom(gt_y.begin() + ind_min, gt_y.begin() + ind_max + 1);
+  gp.plot_two_xy(gt_x_zoom,gt_y_zoom,ekf_x,ekf_y, "GT vs EKF traj. detail","x","y", 2);
 
 }
 
