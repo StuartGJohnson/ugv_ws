@@ -48,7 +48,6 @@ observed robot behavior.
 \section{State Vector}
 
 The EKF state at time $k$ is
-
 \begin{equation}
 \mathbf{x}_k =
 \begin{bmatrix}
@@ -59,16 +58,13 @@ b_{g,k} \\
 b_k
 \end{bmatrix}.
 \end{equation}
-
 The state components are:
-
 \begin{itemize}
 \item $x_k,y_k$: robot position in the odometry frame,
 \item $\theta_k$: robot heading,
 \item $b_{g,k}$: gyroscope yaw-rate bias,
 \item $b_k$: effective wheel separation.
 \end{itemize}
-
 The effective wheel separation $b_k$ should not be interpreted too
 literally as the physical distance between wheels. For a skid-steer
 robot, it is an effective kinematic parameter that can absorb wheel slip,
@@ -77,7 +73,6 @@ tire compliance, load transfer, and other unmodeled effects.
 \section{Inputs and Measured Quantities}
 
 Let the measured left and right wheel linear velocities be
-
 \begin{equation}
 \mathbf{u}_k =
 \begin{bmatrix}
@@ -85,23 +80,17 @@ v_{L,k} \\
 v_{R,k}
 \end{bmatrix}.
 \end{equation}
-
 The differential-drive forward velocity estimate is
-
 \begin{equation}
 v_k =
 \frac{v_{R,k}+v_{L,k}}{2}.
 \end{equation}
-
 The wheel-derived yaw-rate estimate is
-
 \begin{equation}
 \omega_k =
 \frac{v_{R,k}-v_{L,k}}{b_k}.
 \end{equation}
-
 The gyroscope measurement is denoted
-
 \begin{equation}
 z_{g,k}.
 \end{equation}
@@ -114,7 +103,6 @@ one discrete update step.
 \section{Continuous-Time Process Model}
 
 The continuous-time kinematic model is
-
 \begin{align}
 \dot{x} &= v \cos\theta, \\
 \dot{y} &= v \sin\theta, \\
@@ -127,13 +115,10 @@ The continuous-time kinematic model is
 \section{Discretization}
 
 The Euler update process model is
-
 \begin{equation}
 \mathbf{x}_{k+1} = f(\mathbf{x}_k, \mathbf{u}_k) + \textbf{w}_k
 \end{equation}
-
 where $\textbf{w}_k$ is the process noise. $f$ is defined as:
-
 \begin{align}
 \mathbf{x}_{k+1}&= f(\mathbf{x}_k, \mathbf{u}_k)
 \\
@@ -172,16 +157,13 @@ b_k.
 \section{Process Jacobian}
 
 The EKF process Jacobian is
-
 \begin{equation}
 F_k =
 \left.
 \frac{\partial f}{\partial \mathbf{x}}
 \right|_{\hat{\mathbf{x}}_{k|k},\mathbf{u}_k}.
 \end{equation}
-
 The full state Jacobian is
-
 \begin{equation}
 F_k =
 \begin{bmatrix}
@@ -197,10 +179,8 @@ F_k =
 \end{equation}
 
 
-\section{Input and Process Noise Propagation}
-
+\section{Process Noise}
 Let the wheel speed covariance be
-
 \begin{equation}
 \Sigma_u =
 \begin{bmatrix}
@@ -208,10 +188,8 @@ Let the wheel speed covariance be
 \sigma_{v_L v_R} & \sigma_{v_R}^2
 \end{bmatrix}.
 \end{equation}
-
 If the left and right wheel speed errors are assumed
 uncorrelated, then
-
 \begin{equation}
 \Sigma_u =
 \begin{bmatrix}
@@ -219,9 +197,7 @@ uncorrelated, then
 0 & \sigma_{v_R}^2
 \end{bmatrix}.
 \end{equation}
-
-The input Jacobian is
-
+The control Jacobian is
 \begin{equation}
 G_k
 =
@@ -229,9 +205,7 @@ G_k
 \frac{\partial f}{\partial \mathbf{u}}
 \right|_{\hat{\mathbf{x}}_{k|k},\mathbf{u}_k}.
 \end{equation}
-
 which evaluates to:
-
 \begin{equation}
 G_k
 =
@@ -250,11 +224,17 @@ G_k
 0 & 0
 \end{bmatrix}.
 \end{equation}
-
-Random-walk process noise for gyroscope bias and effective wheel separation is
-
+Propagation of errors therefore gives a contribution to process covariance of
 \begin{equation}
-Q_k
+Q_{u,k}
+=
+G_k
+\Sigma_u
+G_k^{T}
+\end{equation}
+Random-walk process noise for gyroscope bias and effective wheel separation is
+\begin{equation}
+Q_{b,k}
 =
 \begin{bmatrix}
 0 & 0 & 0 & 0 & 0 \\
@@ -264,23 +244,28 @@ Q_k
 0 & 0 & 0 & 0 & \sigma_b^2 \Delta t_k
 \end{bmatrix}.
 \end{equation}
-
+The skid-steer kinematic model noise is modeled as a constant yaw-rate error over the sampling interval. This results in an additive term in the yaw state diagonal of the process covariance:
+\begin{equation}
+Q_{m,k}
+=
+\begin{bmatrix}
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & \sigma_{\omega}^2 \Delta t_k^2 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0 \\
+0 & 0 & 0 & 0 & 0
+\end{bmatrix}.
+\end{equation}
 Thus the total process covariance contribution is
-
 \begin{equation}
 Q_{k}
 =
-G_k
-\Sigma_u
-G_k^{T}
-+
-Q_k
+Q_{u,k} + Q_{b,k} + Q_{m,k}
 \end{equation}
 
 \section{Gyroscope Measurement Model}
 
 The gyroscope measurements return yaw rate plus bias:
-
 \begin{equation}
 z_{g,k}
 =
@@ -290,11 +275,7 @@ b_{g,k}
 +
 \nu_k,
 \end{equation}
-
-where $\nu_k$ is zero-mean gyroscope measurement noise.
-
-The measurement function is
-
+where $\nu_k$ is zero-mean gyroscope measurement noise. The measurement function is
 \begin{equation}
 h(\mathbf{x}_k,\mathbf{u}_k)
 =
@@ -302,9 +283,7 @@ h(\mathbf{x}_k,\mathbf{u}_k)
 +
 b_{g,k}.
 \end{equation}
-
 The measurement Jacobian is
-
 \begin{equation}
 H_k
 =
@@ -312,9 +291,7 @@ H_k
 \frac{\partial h}{\partial \mathbf{x}}
 \right|_{\hat{\mathbf{x}}_{k+1|k},\mathbf{u}_k}.
 \end{equation}
-
 Explicitly,
-
 \begin{equation}
 H_k
 =
@@ -326,9 +303,7 @@ H_k
 -\frac{v_{R,k}-v_{L,k}}{b_k^2}
 \end{bmatrix}.
 \end{equation}
-
 The gyroscope measurement covariance is
-
 \begin{equation}
 R =
 \sigma_g^2.
@@ -342,28 +317,21 @@ operations:
 \subsection{Prediction}
 
 Given the posterior estimate from the previous step,
-
 \begin{equation}
 \hat{\mathbf{x}}_{k|k},
 \end{equation}
-
 and covariance
-
 \begin{equation}
 P_{k|k},
 \end{equation}
-
 compute
-
 \begin{equation}
 \hat{\mathbf{x}}_{k+1|k}
 =
 f(\hat{\mathbf{x}}_{k|k},\mathbf{u}_k).
 \end{equation}
-
 Compute $F_k$ and $G_{u,k}$ at
 $\hat{\mathbf{x}}_{k|k}$ and $\mathbf{u}_k$. Then propagate covariance:
-
 \begin{equation}
 P_{k+1|k}
 =
@@ -377,7 +345,6 @@ Q_k.
 \subsection{Update}
 
 The gyroscope innovation is
-
 \begin{equation}
 r_k
 =
@@ -433,13 +400,10 @@ typically \texttt{odom}. The twist is expressed in the frame named by
 The planar pose covariance is obtained directly from the EKF covariance
 matrix. The entries corresponding to $x$, $y$, and yaw are inserted into
 the ROS2 $6\times 6$ pose covariance matrix with ordering
-
 \begin{equation}
 [x,\ y,\ z,\ roll,\ pitch,\ yaw].
 \end{equation}
-
 For example,
-
 \begin{align}
 \Sigma_{pose}(x,x) &= P(x,x), \\
 \Sigma_{pose}(y,y) &= P(y,y), \\
@@ -453,20 +417,15 @@ For example,
 The state definition does not include the twist. Therefore twist covariance must be derived from the uncertainty in the reported twist estimate.
 
 The twist estimate returned to ROS2 is:
-
 \begin{align}
 v &= \frac{v_L+v_R}{2}, \\
 \omega &= \frac{v_R-v_L}{b},
 \end{align}
-
 The ROS2 twist covariance uses ordering
-
 \begin{equation}
 [v_x,\ v_y,\ v_z,\ \omega_x,\ \omega_y,\ \omega_z].
 \end{equation}
-
 Twist covariance for the non-zero components $(v_x,\omega_z)$ is obtained by propagation of errors:
-
 \begin{equation}
 \Sigma_{\mathrm{twist}} (v_x,\omega_z)
 \approx
@@ -485,7 +444,6 @@ J =
 \dfrac{\partial v}{\partial v_L} &
 \dfrac{\partial v}{\partial v_R} &
 \dfrac{\partial v}{\partial b} \\[8pt]
-
 \dfrac{\partial \omega}{\partial v_L} &
 \dfrac{\partial \omega}{\partial v_R} &
 \dfrac{\partial \omega}{\partial b}
@@ -493,7 +451,6 @@ J =
 =
 \begin{bmatrix}
 \dfrac{1}{2} & \dfrac{1}{2} & 0 \\[10pt]
-
 -\dfrac{1}{b} & \dfrac{1}{b} &
 -\dfrac{(v_R-v_L)}{b^2}
 \end{bmatrix}
