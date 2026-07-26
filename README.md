@@ -1,7 +1,7 @@
 
 # ugv_ws
 
-This repo is a heavily modified version of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>. This repo contains instructions for installation and execution of various components as they are modified for various projects and their goals. The repo is currently heavily in flux. A running explanation of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
+This repo includes a rewrite of certain components of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>, in particular the source code in ```src/ugv_main/ugv```. This repo contains instructions for installation and execution of various components. The repo is currently heavily in flux. A running explanation of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
 
 ## Project Indoor Explorer
 
@@ -30,7 +30,7 @@ You will also need to install Gazebo Garden and rviz2.
 
 ### Build - simulation/manager computer
 
-```colcon build --packages-select ugv_base_node ugv_bringup ugv_description differential_drive_test ldlidar_stl_ros2 rf2o_laser_odometry safety gazebo_differential_drive_robot_4wheel point_cloud_tools frontier_explorer rviz_record --cmake-args -DCMAKE_BUILD_TYPE=Release```
+```colcon build --packages-select ugv ugv_description differential_drive_test ldlidar_stl_ros2 rf2o_laser_odometry safety gazebo_differential_drive_robot_4wheel point_cloud_tools frontier_explorer rviz_record --cmake-args -DCMAKE_BUILD_TYPE=Release```
 
 Note: this list will be pruned.
 
@@ -38,7 +38,7 @@ Note: this list will be pruned.
 
 ### Build - robot computer
 
-```colcon build --packages-select ugv_base_node ugv_bringup ugv_description ldlidar_stl_ros2 rf2o_laser_odometry safety point_cloud_tools frontier_explorer --cmake-args -DCMAKE_BUILD_TYPE=Release```
+```colcon build --packages-select ugv ugv_description ldlidar_stl_ros2 rf2o_laser_odometry safety point_cloud_tools frontier_explorer --cmake-args -DCMAKE_BUILD_TYPE=Release```
 
 ```source install/setup.bash```
 
