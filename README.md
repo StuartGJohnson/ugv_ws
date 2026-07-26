@@ -1,7 +1,7 @@
 
 # ugv_ws
 
-This repo includes a rewrite of certain components of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>, in particular the source code in ```src/ugv_main/ugv```. This repo contains instructions for installation and execution of various components. The repo is currently heavily in flux. A running explanation of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
+This repo includes a rewrite of certain components of <a href="https://github.com/waveshareteam/ugv_ws">Waveshare ugv_ws</a>, in particular the source code in ```src/ugv_main/ugv``` implements the functionality of code in the Waveshare repo in ```src/ugv_main/ugv_base_ros``` and ```src/ugv_main/ugv_bringup```. This repo also contains instructions for installation and execution of various components and calibrations. A detailed explanation and analysis of projects using this repo (which is also a ROS2 workspace) is <a href="https://stuartgjohnson.github.io/ugv_ws">UGV02xProjects</a> 
 
 ## Project Indoor Explorer
 
