@@ -6,7 +6,7 @@ find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
-install(DIRECTORY launch xacro rviz
+install(DIRECTORY launch xacro 
     DESTINATION share/${PROJECT_NAME}
 )
 
